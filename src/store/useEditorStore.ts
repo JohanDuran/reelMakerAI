@@ -20,6 +20,7 @@ type EditorState = {
   canvasHeight: number;
   addElement: (el: Omit<EditorElement, "id">) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
+  removeElement: (id: string) => void;
   selectElement: (id: string | null) => void;
   setAspectRatio: (ratio: "9:16" | "16:9") => void;
 };
@@ -40,6 +41,11 @@ export const useEditorStore = create<EditorState>((set) => ({
       elements: s.elements.map((e) =>
         e.id === id ? { ...e, ...updates } : e
       ),
+    })),
+  removeElement: (id) =>
+    set((s) => ({
+      elements: s.elements.filter((e) => e.id !== id),
+      selectedId: s.selectedId === id ? null : s.selectedId,
     })),
   selectElement: (id) => set({ selectedId: id }),
   setAspectRatio: (ratio) =>

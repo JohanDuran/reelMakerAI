@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Stage, Layer, Text, Rect, Transformer } from "react-konva";
 import { useEditorStore } from "../store/useEditorStore";
+import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { ContextMenu } from "./ContextMenu";
 
 export function CanvasEditor() {
-  const { elements, updateElement, selectElement, selectedId, canvasWidth, canvasHeight } = useEditorStore();
+  const { elements, updateElement, selectElement, selectedId, canvasWidth, canvasHeight, setAspectRatio } = useEditorStore();
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
   
   const stageRef = useRef<any>(null);
@@ -104,11 +105,25 @@ export function CanvasEditor() {
       const defaultH = elNow.height ?? 30;
       if (activeAnchor === 'middle-left' || activeAnchor === 'middle-right') {
         const scaleX = node.scaleX() || 1;
-        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
-        node.width(newW);
-        node.scaleX(1);
-        // update width only; schedule a box update so height aligns
-        updateElement(id, { width: newW });
+        const calculatedW = Math.max(1, Math.round((elNow.width ?? defaultW) * scaleX));
+        // compute sensible minimum width for text: at least a few characters wide
+        const font = elNow.fontSize ?? 24;
+        const approxCharWidth = Math.max(4, Math.round(font * 0.55));
+        const minFromText = Math.max(10, (elNow.text ? Math.round((elNow.text.length || 1) * approxCharWidth * 0.25) : 10));
+        const minW = Math.max(10, minFromText);
+        const newW = Math.max(minW, calculatedW);
+        // if we clamped up and the active anchor is middle-left, move x accordingly so left handle doesn't cross right
+        if (activeAnchor === 'middle-left') {
+          const rightEdge = (elNow.x ?? 0) + (elNow.width ?? defaultW);
+          const newX = Math.round(rightEdge - newW);
+          node.width(newW);
+          node.scaleX(1);
+          updateElement(id, { x: newX, width: newW });
+        } else {
+          node.width(newW);
+          node.scaleX(1);
+          updateElement(id, { width: newW });
+        }
         scheduleMeasure(id, 'updateBox');
       } else if (activeAnchor === 'top-center' || activeAnchor === 'bottom-center') {
         const scaleY = node.scaleY() || 1;
@@ -145,9 +160,17 @@ export function CanvasEditor() {
       const defaultW = elNow.width ?? 120;
       const defaultH = elNow.height ?? 80;
       if (activeAnchor === 'middle-left' || activeAnchor === 'middle-right') {
-        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
-        const x = Math.round(node.x());
-        updateElement(id, { width: newW, x });
+        const calculatedW = Math.max(1, Math.round((elNow.width ?? defaultW) * scaleX));
+        const minW = 20; // images minimum width
+        const newW = Math.max(minW, calculatedW);
+        if (activeAnchor === 'middle-left') {
+          const rightEdge = (elNow.x ?? 0) + (elNow.width ?? defaultW);
+          const x = Math.round(rightEdge - newW);
+          updateElement(id, { width: newW, x });
+        } else {
+          const x = Math.round(node.x());
+          updateElement(id, { width: newW, x });
+        }
         node.scaleX(1);
       } else if (activeAnchor === 'top-center' || activeAnchor === 'bottom-center') {
         const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
@@ -165,6 +188,22 @@ export function CanvasEditor() {
       }
     }
   };
+
+  // handle Delete key to remove selected element
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedId) {
+          // remove element from store
+          // import the removeElement action lazily to avoid circular issues
+          const { removeElement } = useEditorStore.getState();
+          removeElement(selectedId);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId]);
 
   // when fontSize is changed via inspector, measure and update box height so handles move
   useEffect(() => {
@@ -199,6 +238,35 @@ export function CanvasEditor() {
         onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
         style={{ width: canvasWidth + 40, height: canvasHeight + 40 }}
       >
+        {/* Aspect ratio dropdown (upper-right, outside canvas) */}
+  <div style={{ position: 'absolute', right: -60, top: 8 }}>
+          <FormControl size="small" variant="outlined" style={{ minWidth: 96, background: 'white', borderRadius: 6 }}>
+            <InputLabel id="aspect-select-label">Ratio</InputLabel>
+            <Select
+              labelId="aspect-select-label"
+              value={canvasHeight > canvasWidth ? '9:16' : '16:9'}
+              label="Ratio"
+              onChange={(e: React.ChangeEvent<{ value: unknown }>) => setAspectRatio(e.target.value as '9:16' | '16:9')}
+            >
+              <MenuItem value="9:16">9:16</MenuItem>
+              <MenuItem value="16:9">16:9</MenuItem>
+            </Select>
+          </FormControl>
+        </div>
+
+        {/* Selection badge (outside top-right of canvas) */}
+        {selectedId && (() => {
+          const el = elements.find((x) => x.id === selectedId);
+          if (!el) return null;
+          return (
+            <div style={{ position: 'absolute', right: 120, top: -28 }}>
+              <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', padding: '6px 8px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', fontSize: 12 }}>
+                {el.type === 'text' ? `Text — ${el.fontSize || 24}px` : `Image — ${el.width || 0}×${el.height || 0}`} &nbsp;
+                <span style={{ color: '#888' }}>(Del)</span>
+              </div>
+            </div>
+          );
+        })()}
   {/* canvas area */}
   <div style={{ width: canvasWidth, height: canvasHeight, background: "#f3f4f6", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
         <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
@@ -217,8 +285,11 @@ export function CanvasEditor() {
             <Transformer
               ref={trRef}
               keepRatio={true}
-              // keep corners and add top-center/bottom-center for height-only control
-              enabledAnchors={["top-left", "top-center", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-center", "bottom-right"]}
+              // disable rotation affordance
+              rotationSnapAngle={0}
+              rotateEnabled={false}
+              // keep corner anchors and middle side anchors; top-center/bottom-center removed
+              enabledAnchors={["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]}
             />
             {elements.map((el) => {
               if (el.type === "text") {

@@ -184,8 +184,17 @@ export function CanvasEditor() {
       <div style={{ width: canvasWidth, height: canvasHeight, background: "white", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
         <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
           <Layer>
-            {/* Transformer for selected text nodes. Keep corner anchors but also add middle-left/right anchors
-                so the user can resize horizontally only without changing text font size. */}
+            {/* transparent background rect to detect clicks on empty canvas and clear selection */}
+            <Rect
+              x={0}
+              y={0}
+              width={canvasWidth}
+              height={canvasHeight}
+              fill="transparent"
+              onMouseDown={() => { selectElement(null); setMenuPos(null); }}
+            />
+
+            {/* Transformer for selected text nodes. Keep corner anchors and middle handles for user control. */}
             <Transformer
               ref={trRef}
               keepRatio={true}

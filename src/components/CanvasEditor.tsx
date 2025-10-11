@@ -9,6 +9,7 @@ export function CanvasEditor() {
   
   const stageRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState<number>(1);
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text: string; left: number; top: number; width: number; height: number }>(null);
@@ -70,6 +71,23 @@ export function CanvasEditor() {
       }
     }
   }, [selectedId, elements]);
+
+  // compute scale so the canvas fits within the window (avoid scrolling)
+  useEffect(() => {
+    const compute = () => {
+      const paddingW = 80; // account for UI chrome/margins
+      const paddingH = 120;
+      const availW = Math.max(200, window.innerWidth - paddingW);
+      const availH = Math.max(200, window.innerHeight - paddingH);
+      const targetW = canvasWidth + 40; // include outer padding used in layout
+      const targetH = canvasHeight + 40;
+      const f = Math.min(1, availW / targetW, availH / targetH);
+      setScale(f);
+    };
+    compute();
+    window.addEventListener('resize', compute);
+    return () => window.removeEventListener('resize', compute);
+  }, [canvasWidth, canvasHeight]);
 
   // smooth transform handler: convert scale to fontSize and reset scale
   const handleTransform = (id: string) => {
@@ -174,14 +192,15 @@ export function CanvasEditor() {
   // NOTE: manual corner resize handler removed; resizing is handled by Transformer for text
 
   return (
-    <div
-      ref={containerRef}
-      className="relative border rounded-lg shadow-sm bg-gray-100 flex justify-center items-center"
-      onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
-      style={{ width: canvasWidth + 40, height: canvasHeight + 40 }}
-    >
-      {/* canvas area */}
-      <div style={{ width: canvasWidth, height: canvasHeight, background: "white", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
+    <div style={{ transformOrigin: 'top left', transform: `scale(${scale})` }}>
+      <div
+        ref={containerRef}
+        className="relative border rounded-lg shadow-sm bg-gray-100 flex justify-center items-center"
+        onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
+        style={{ width: canvasWidth + 40, height: canvasHeight + 40 }}
+      >
+  {/* canvas area */}
+  <div style={{ width: canvasWidth, height: canvasHeight, background: "#f3f4f6", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
         <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
           <Layer>
             {/* transparent background rect to detect clicks on empty canvas and clear selection */}
@@ -316,6 +335,7 @@ export function CanvasEditor() {
       })()}
 
       {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
+      </div>
     </div>
   );
 }

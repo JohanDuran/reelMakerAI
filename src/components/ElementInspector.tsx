@@ -27,6 +27,32 @@ export function ElementInspector() {
         </>
       )}
 
+      {element.type === "text" && (
+        <>
+          <label className="block text-sm text-gray-600 mb-1">Font size</label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1 mb-3"
+            value={element.fontSize || 24}
+            onChange={(e) => updateElement(element.id, { fontSize: parseInt(e.target.value) })}
+          />
+        </>
+      )}
+
+      {element.type === "text" && (
+        <>
+          <label className="block text-sm text-gray-600 mb-1">Width</label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1 mb-3"
+            value={element.width}
+            onChange={(e) =>
+              updateElement(element.id, { width: parseInt(e.target.value) })
+            }
+          />
+        </>
+      )}
+
       <label className="block text-sm text-gray-600 mb-1">X</label>
       <input
         type="number"
@@ -46,6 +72,28 @@ export function ElementInspector() {
           updateElement(element.id, { y: parseInt(e.target.value) })
         }
       />
+      {element.type === "image" && (
+        <>
+          <label className="block text-sm text-gray-600 mb-1">Width</label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1 mb-3"
+            value={element.width}
+            onChange={(e) =>
+              updateElement(element.id, { width: parseInt(e.target.value) })
+            }
+          />
+          <label className="block text-sm text-gray-600 mb-1">Height</label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1 mb-3"
+            value={element.height}
+            onChange={(e) =>
+              updateElement(element.id, { height: parseInt(e.target.value) })
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

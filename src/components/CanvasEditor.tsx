@@ -80,9 +80,10 @@ export function CanvasEditor() {
     // determine the active anchor on the transformer (if any)
     const activeAnchor = trRef.current?.getActiveAnchor ? trRef.current.getActiveAnchor() : null;
     if (elNow.type === "text") {
-      // If the user is dragging the middle-left or middle-right anchor, only update the width
-      // (keep fontSize unchanged). Otherwise, transform maps to fontSize and width as before.
+      // If the user is dragging middle-left/right, only update width (keep fontSize unchanged).
+      // If the user is dragging top-center/bottom-center, only update height (keep fontSize unchanged).
       const defaultW = elNow.width ?? Math.max(80, Math.min(600, (elNow.text?.length || 0) * 8));
+      const defaultH = elNow.height ?? 30;
       if (activeAnchor === 'middle-left' || activeAnchor === 'middle-right') {
         const scaleX = node.scaleX() || 1;
         const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
@@ -91,6 +92,12 @@ export function CanvasEditor() {
         // update width only; schedule a box update so height aligns
         updateElement(id, { width: newW });
         scheduleMeasure(id, 'updateBox');
+      } else if (activeAnchor === 'top-center' || activeAnchor === 'bottom-center') {
+        const scaleY = node.scaleY() || 1;
+        const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
+        node.height(newH);
+        node.scaleY(1);
+        updateElement(id, { height: newH });
       } else {
         // Use the node's scale to compute new font size and width, but don't overwrite x/y here
         const scaleX = node.scaleX() || 1;
@@ -124,6 +131,11 @@ export function CanvasEditor() {
         const x = Math.round(node.x());
         updateElement(id, { width: newW, x });
         node.scaleX(1);
+      } else if (activeAnchor === 'top-center' || activeAnchor === 'bottom-center') {
+        const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
+        const y = Math.round(node.y());
+        updateElement(id, { height: newH, y });
+        node.scaleY(1);
       } else {
         const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
         const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
@@ -177,7 +189,8 @@ export function CanvasEditor() {
             <Transformer
               ref={trRef}
               keepRatio={true}
-              enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"]}
+              // keep corners and add top-center/bottom-center for height-only control
+              enabledAnchors={["top-left", "top-center", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-center", "bottom-right"]}
             />
             {elements.map((el) => {
               if (el.type === "text") {

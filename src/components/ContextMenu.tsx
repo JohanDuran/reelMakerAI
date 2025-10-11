@@ -7,7 +7,7 @@ type ContextMenuProps = {
 };
 
 export function ContextMenu({ position, onClose }: ContextMenuProps) {
-  const { selectedId, elements, updateElement, selectElement } = useEditorStore();
+  const { selectedId, elements, selectElement, addElement } = useEditorStore();
   const element = elements.find((e) => e.id === selectedId);
 
   useEffect(() => {
@@ -26,7 +26,9 @@ export function ContextMenu({ position, onClose }: ContextMenuProps) {
       <button
         className="w-full text-left px-3 py-2 hover:bg-gray-100"
         onClick={() => {
-          updateElement(element.id, { text: "Duplicated Element" });
+          // create a duplicate element (same properties, new id) and select it
+          const { id, ...rest } = element as any;
+          addElement({ ...rest });
           onClose();
         }}
       >

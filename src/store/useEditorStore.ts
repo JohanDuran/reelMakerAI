@@ -31,9 +31,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasWidth: 800,
   canvasHeight: 450,
   addElement: (el) =>
-    set((s) => ({
-      elements: [...s.elements, { ...el, id: crypto.randomUUID() }],
-    })),
+    set((s) => {
+      const newEl = { ...el, id: crypto.randomUUID() };
+      return { elements: [...s.elements, newEl], selectedId: newEl.id };
+    }),
   updateElement: (id, updates) =>
     set((s) => ({
       elements: s.elements.map((e) =>

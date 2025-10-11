@@ -77,42 +77,62 @@ export function CanvasEditor() {
     if (!node) return;
     const elNow = elements.find((x) => x.id === id);
     if (!elNow) return;
+    // determine the active anchor on the transformer (if any)
+    const activeAnchor = trRef.current?.getActiveAnchor ? trRef.current.getActiveAnchor() : null;
     if (elNow.type === "text") {
-      // Use the node's scale to compute new font size and width, but don't overwrite x/y here
-      const scaleX = node.scaleX() || 1;
-      const scaleY = node.scaleY() || 1;
-      const scale = (scaleX + scaleY) / 2;
-      const currentFont = elNow.fontSize ?? 24;
-      const newFont = Math.max(6, Math.round(currentFont * scale));
-
+      // If the user is dragging the middle-left or middle-right anchor, only update the width
+      // (keep fontSize unchanged). Otherwise, transform maps to fontSize and width as before.
       const defaultW = elNow.width ?? Math.max(80, Math.min(600, (elNow.text?.length || 0) * 8));
-      const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scale));
+      if (activeAnchor === 'middle-left' || activeAnchor === 'middle-right') {
+        const scaleX = node.scaleX() || 1;
+        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
+        node.width(newW);
+        node.scaleX(1);
+        // update width only; schedule a box update so height aligns
+        updateElement(id, { width: newW });
+        scheduleMeasure(id, 'updateBox');
+      } else {
+        // Use the node's scale to compute new font size and width, but don't overwrite x/y here
+        const scaleX = node.scaleX() || 1;
+        const scaleY = node.scaleY() || 1;
+        const scale = (scaleX + scaleY) / 2;
+        const currentFont = elNow.fontSize ?? 24;
+        const newFont = Math.max(6, Math.round(currentFont * scale));
 
-      // apply directly to node: set width and fontSize, then reset scale
-      node.width(newW);
-      node.fontSize(newFont);
-      node.scaleX(1);
-      node.scaleY(1);
+        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scale));
 
-      // measure the rendered height after applying fontSize
-      const measuredH = typeof node.height === 'function' ? node.height() : (elNow.height ?? 30);
+        // apply directly to node: set width and fontSize, then reset scale
+        node.width(newW);
+        node.fontSize(newFont);
+        node.scaleX(1);
+        node.scaleY(1);
 
-      // update store (do not change x/y here to avoid jumps)
-      updateElement(id, { fontSize: newFont, width: newW, height: measuredH });
+        // measure the rendered height after applying fontSize
+        const measuredH = typeof node.height === 'function' ? node.height() : (elNow.height ?? 30);
+
+        // update store (do not change x/y here to avoid jumps)
+        updateElement(id, { fontSize: newFont, width: newW, height: measuredH });
+      }
     } else {
       // image or other shapes: allow independent scaleX/scaleY and rotation
       const scaleX = node.scaleX() || 1;
       const scaleY = node.scaleY() || 1;
       const defaultW = elNow.width ?? 120;
       const defaultH = elNow.height ?? 80;
-      const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
-      const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
-      const x = Math.round(node.x());
-      const y = Math.round(node.y());
-  updateElement(id, { width: newW, height: newH, x, y });
-
-      node.scaleX(1);
-      node.scaleY(1);
+      if (activeAnchor === 'middle-left' || activeAnchor === 'middle-right') {
+        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
+        const x = Math.round(node.x());
+        updateElement(id, { width: newW, x });
+        node.scaleX(1);
+      } else {
+        const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
+        const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
+        const x = Math.round(node.x());
+        const y = Math.round(node.y());
+        updateElement(id, { width: newW, height: newH, x, y });
+        node.scaleX(1);
+        node.scaleY(1);
+      }
     }
   };
 
@@ -152,8 +172,13 @@ export function CanvasEditor() {
       <div style={{ width: canvasWidth, height: canvasHeight, background: "white", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
         <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
           <Layer>
-            {/* Transformer for selected text nodes */}
-            <Transformer ref={trRef} keepRatio={true} enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right"]} />
+            {/* Transformer for selected text nodes. Keep corner anchors but also add middle-left/right anchors
+                so the user can resize horizontally only without changing text font size. */}
+            <Transformer
+              ref={trRef}
+              keepRatio={true}
+              enabledAnchors={["top-left", "top-right", "bottom-left", "bottom-right", "middle-left", "middle-right"]}
+            />
             {elements.map((el) => {
               if (el.type === "text") {
                 const { w, h } = getElDefaults(el);
@@ -174,6 +199,7 @@ export function CanvasEditor() {
                       draggable
                       fill={el.id === selectedId ? "blue" : "black"}
                       onClick={() => selectElement(el.id)}
+                      visible={!(editing && editing.id === el.id)}
                       onTransform={() => handleTransform(el.id)}
                       onDblClick={(e) => {
                         // show inline editor
@@ -226,35 +252,46 @@ export function CanvasEditor() {
       </div>
 
       {/* inline editor for text elements */}
-      {editing && (
-        <div
-          style={{
-            position: "absolute",
-            left: editing.left + 20,
-            top: editing.top + 20,
-            width: editing.width,
-            zIndex: 50,
-          }}
-        >
-          <textarea
-            autoFocus
-            value={editing.text}
-            onChange={(e) => setEditing({ ...editing, text: e.target.value })}
-            onBlur={() => {
-              updateElement(editing.id, { text: editing.text });
-              setEditing(null);
+      {editing && (() => {
+        const el = elements.find((x) => x.id === editing.id);
+        return (
+          <div
+            key={editing.id}
+            style={{
+              position: "absolute",
+              left: editing.left,
+              top: editing.top,
+              width: editing.width,
+              zIndex: 50,
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                updateElement(editing.id, { text: editing.text });
-                setEditing(null);
-              }
-            }}
-            style={{ width: "100%", minHeight: editing.height, resize: "vertical" }}
-          />
-        </div>
-      )}
+          >
+            <textarea
+              autoFocus
+              value={editing.text}
+              onChange={(e) => {
+                const txt = e.target.value;
+                setEditing({ ...editing, text: txt });
+                updateElement(editing.id, { text: txt });
+              }}
+              onBlur={() => setEditing(null)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditing(null);
+              }}
+              style={{
+                width: "100%",
+                minHeight: editing.height,
+                resize: "vertical",
+                fontSize: (el?.fontSize || 24) + "px",
+                lineHeight: "1.1",
+                fontFamily: "inherit",
+                background: "transparent",
+                border: "1px solid rgba(0,0,0,0.12)",
+                padding: "2px",
+              }}
+            />
+          </div>
+        );
+      })()}
 
       {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
     </div>

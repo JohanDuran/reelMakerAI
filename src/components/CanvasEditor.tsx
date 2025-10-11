@@ -9,7 +9,7 @@ export function CanvasEditor() {
   
   const stageRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const textNodesRef = useRef<Record<string, any>>({});
+  const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text: string; left: number; top: number; width: number; height: number }>(null);
   const measureQueueRef = useRef<Set<string>>(new Set());
@@ -21,7 +21,7 @@ export function CanvasEditor() {
     const ids = Array.from(measureQueueRef.current);
     measureQueueRef.current.clear();
     ids.forEach((rid) => {
-      const node = textNodesRef.current[rid];
+      const node = nodeRefsRef.current[rid];
       if (!node || typeof node.height !== "function") return;
       const measured = node.height();
       const elNow = elements.find((x) => x.id === rid);
@@ -57,9 +57,9 @@ export function CanvasEditor() {
     }
   };
 
-  // attach transformer to selected text node
+  // attach transformer to selected node (text or image)
   useEffect(() => {
-    const node = selectedId ? textNodesRef.current[selectedId] : null;
+    const node = selectedId ? nodeRefsRef.current[selectedId] : null;
     if (trRef.current) {
       if (node && node.getStage()) {
         trRef.current.nodes([node]);
@@ -73,30 +73,47 @@ export function CanvasEditor() {
 
   // smooth transform handler: convert scale to fontSize and reset scale
   const handleTransform = (id: string) => {
-    const node = textNodesRef.current[id];
+    const node = nodeRefsRef.current[id];
     if (!node) return;
     const elNow = elements.find((x) => x.id === id);
     if (!elNow) return;
+    if (elNow.type === "text") {
+      // Use the node's scale to compute new font size and width, but don't overwrite x/y here
+      const scaleX = node.scaleX() || 1;
+      const scaleY = node.scaleY() || 1;
+      const scale = (scaleX + scaleY) / 2;
+      const currentFont = elNow.fontSize ?? 24;
+      const newFont = Math.max(6, Math.round(currentFont * scale));
 
-    const scaleX = node.scaleX() || 1;
-    const scaleY = node.scaleY() || 1;
-    // prefer uniform scaling
-    const scale = (scaleX + scaleY) / 2;
-    const currentFont = elNow.fontSize ?? 24;
-    const newFont = Math.max(6, Math.round(currentFont * scale));
+      const defaultW = elNow.width ?? Math.max(80, Math.min(600, (elNow.text?.length || 0) * 8));
+      const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scale));
 
-    const defaultW = elNow.width ?? (elNow.type === "text" ? Math.max(80, Math.min(600, (elNow.text?.length || 0) * 8)) : 120);
-    const defaultH = elNow.height ?? (elNow.type === "text" ? 30 : 80);
-    const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scale));
-    const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scale));
+      // apply directly to node: set width and fontSize, then reset scale
+      node.width(newW);
+      node.fontSize(newFont);
+      node.scaleX(1);
+      node.scaleY(1);
 
-    // update store
-    updateElement(id, { fontSize: newFont, width: newW, height: newH });
+      // measure the rendered height after applying fontSize
+      const measuredH = typeof node.height === 'function' ? node.height() : (elNow.height ?? 30);
 
-    // apply directly to node and reset scale so transformer continues from 1
-    node.fontSize(newFont);
-    node.scaleX(1);
-    node.scaleY(1);
+      // update store (do not change x/y here to avoid jumps)
+      updateElement(id, { fontSize: newFont, width: newW, height: measuredH });
+    } else {
+      // image or other shapes: allow independent scaleX/scaleY and rotation
+      const scaleX = node.scaleX() || 1;
+      const scaleY = node.scaleY() || 1;
+      const defaultW = elNow.width ?? 120;
+      const defaultH = elNow.height ?? 80;
+      const newW = Math.max(10, Math.round((elNow.width ?? defaultW) * scaleX));
+      const newH = Math.max(10, Math.round((elNow.height ?? defaultH) * scaleY));
+      const x = Math.round(node.x());
+      const y = Math.round(node.y());
+  updateElement(id, { width: newW, height: newH, x, y });
+
+      node.scaleX(1);
+      node.scaleY(1);
+    }
   };
 
   // when fontSize is changed via inspector, measure and update box height so handles move
@@ -147,13 +164,13 @@ export function CanvasEditor() {
                       text={el.text || "Text"}
                       // place text box at element x and use element width so align works
                       x={el.x}
-                      ref={(n) => { if (n) textNodesRef.current[el.id] = n; else delete textNodesRef.current[el.id]; }}
+                      ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
                       width={el.width ?? w}
                       // allow height to be dynamic; fontSize remains default
                       fontSize={el.fontSize ?? 24}
                       align="center"
-                      // vertically center text inside the element using a simple heuristic
-                      y={(el.y ?? 0) + (((el.height ?? h) - 24) / 2)}
+                      // vertically center text inside the element using the element's font size
+                      y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2)}
                       draggable
                       fill={el.id === selectedId ? "blue" : "black"}
                       onClick={() => selectElement(el.id)}
@@ -188,10 +205,12 @@ export function CanvasEditor() {
                       y={el.y}
                       width={el.width || 120}
                       height={el.height || 80}
+                      ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
                       fill={el.id === selectedId ? "#aaa" : "lightgray"}
                       draggable
                       onClick={() => selectElement(el.id)}
                       onDragEnd={(e) => handleDrag(el.id, e)}
+                      onTransform={() => handleTransform(el.id)}
                     />
                     {el.id === selectedId && (
                       <>

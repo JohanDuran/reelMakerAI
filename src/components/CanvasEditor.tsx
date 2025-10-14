@@ -1,21 +1,23 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Stage, Layer, Text, Rect, Transformer } from "react-konva";
+import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from "../store/useEditorStore";
-import { FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { ContextMenu } from "./ContextMenu";
+import CanvasStage from './canvas/CanvasStage';
+import CanvasControls from './canvas/CanvasControls';
+import InlineTextEditor from './canvas/InlineTextEditor';
+import './canvas/CanvasEditor.css';
 
 export function CanvasEditor() {
   const { elements, updateElement, selectElement, selectedId, canvasWidth, canvasHeight, setAspectRatio } = useEditorStore();
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
-  
+
+  // refs used by the stage and for measuring parent width
   const stageRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  // ref attached to the component root so we can measure the parent (the Grid item)
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
-  const [editing, setEditing] = useState<null | { id: string; text: string; left: number; top: number; width: number; height: number }>(null);
+  const [editing, setEditing] = useState<null | { id: string; text?: string; left: number; top: number; width: number; height: number }>(null);
   const measureQueueRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number | null>(null);
   const prevFontsRef = useRef<Record<string, number>>({});
@@ -233,12 +235,14 @@ export function CanvasEditor() {
     });
   }, [elements]);
 
+  // Compute sensible defaults for element width/height
   const getElDefaults = (el: any) => {
-    const defaultW = el.width ?? (el.type === "text" ? Math.max(80, Math.min(600, (el.text?.length || 0) * 8)) : 120);
-    const defaultH = el.height ?? (el.type === "text" ? 30 : 80);
+    const defaultW = el.width ?? (el.type === 'text' ? Math.max(80, Math.min(600, (el.text?.length || 0) * 8)) : 120);
+    const defaultH = el.height ?? (el.type === 'text' ? 30 : 80);
     return { w: defaultW, h: defaultH };
   };
 
+  // Update element position after drag end
   const handleDrag = (id: string, e: any) => {
     updateElement(id, { x: e.target.x(), y: e.target.y() });
   };
@@ -246,186 +250,58 @@ export function CanvasEditor() {
   // NOTE: manual corner resize handler removed; resizing is handled by Transformer for text
 
   return (
-    <div ref={wrapperRef} style={{ height: '100%' }}>
-      {/* prevent the scaled wrapper from intercepting pointer events so dropdowns/buttons remain clickable */}
-      <div style={{ transformOrigin: 'top left', transform: `scale(${scale})`, pointerEvents: 'none' }}>
-      <div
-        ref={containerRef}
-        className="relative border rounded-lg shadow-sm bg-gray-100 flex justify-center items-center"
-        onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
-        style={{ width: canvasWidth + 40, height: canvasHeight + 40, pointerEvents: 'auto' }}
-      >
-        {/* Aspect ratio dropdown (upper-right, outside canvas) */}
-  <div style={{ position: 'absolute', right: -60, top: 8, zIndex: 2000, pointerEvents: 'auto' }}>
-          <FormControl size="small" variant="outlined" style={{ minWidth: 96, background: 'white', borderRadius: 6 }}>
-            <InputLabel id="aspect-select-label">Ratio</InputLabel>
-            <Select
-              labelId="aspect-select-label"
-              value={canvasHeight > canvasWidth ? '9:16' : '16:9'}
-              label="Ratio"
-              onChange={(e: any) => setAspectRatio(e.target.value as '9:16' | '16:9')}
-              MenuProps={{ disablePortal: true }}
-            >
-              <MenuItem value="9:16">9:16</MenuItem>
-              <MenuItem value="16:9">16:9</MenuItem>
-            </Select>
-          </FormControl>
-        </div>
+    <div className="canvas-wrapper" ref={wrapperRef}>
+      <CanvasControls canvasWidth={canvasWidth} canvasHeight={canvasHeight} setAspectRatio={setAspectRatio} />
+      {/* scaled wrapper - pointerEvents none so controls are interactive */}
+      <div className="canvas-scaled" style={{ transform: `scale(${scale})`, pointerEvents: 'none' }}>
+        <div
+          ref={containerRef}
+          className="canvas-container relative border rounded-lg shadow-sm flex justify-center items-center"
+          onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
+          style={{ width: canvasWidth + 40, height: canvasHeight + 40, pointerEvents: 'auto' }}
+        >
+          {/* Controls rendered outside the stage but inside the canvas container */}
 
-        {/* Selection badge (outside top-right of canvas) */}
-        {selectedId && (() => {
-          const el = elements.find((x) => x.id === selectedId);
-          if (!el) return null;
-          return (
-            <div style={{ position: 'absolute', right: 120, top: -28 }}>
-              <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', padding: '6px 8px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', fontSize: 12 }}>
-                {el.type === 'text' ? `Text — ${el.fontSize || 24}px` : `Image — ${el.width || 0}×${el.height || 0}`} &nbsp;
-                <span style={{ color: '#888' }}>(Del)</span>
+          {/* Selection badge - shows a small badge for the selected element */}
+          {selectedId && (() => {
+            const el = elements.find((x) => x.id === selectedId);
+            if (!el) return null;
+            return (
+              <div style={{ position: 'absolute', right: 120, top: -28 }}>
+                <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', padding: '6px 8px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', fontSize: 12 }}>
+                  {el.type === 'text' ? `Text — ${el.fontSize || 24}px` : `Image — ${el.width || 0}×${el.height || 0}`} &nbsp;
+                  <span style={{ color: '#888' }}>(Del)</span>
+                </div>
               </div>
-            </div>
-          );
-        })()}
-  {/* canvas area */}
-  <div style={{ width: canvasWidth, height: canvasHeight, background: "#f3f4f6", boxShadow: "0 0 0 1px rgba(0,0,0,0.08) inset" }}>
-        <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
-          <Layer>
-            {/* transparent background rect to detect clicks on empty canvas and clear selection */}
-            <Rect
-              x={0}
-              y={0}
-              width={canvasWidth}
-              height={canvasHeight}
-              fill="transparent"
-              onMouseDown={() => { selectElement(null); setMenuPos(null); }}
-            />
+            );
+          })()}
 
-            {/* Transformer for selected text nodes. Keep corner anchors and middle handles for user control. */}
-            <Transformer
-              ref={trRef}
-              keepRatio={true}
-              // disable rotation affordance
-              rotationSnapAngle={0}
-              rotateEnabled={false}
-              // keep corner anchors and middle side anchors; top-center/bottom-center removed
-              enabledAnchors={["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]}
-            />
-            {elements.map((el) => {
-              if (el.type === "text") {
-                const { w, h } = getElDefaults(el);
-                return (
-                  <React.Fragment key={el.id}>
-                    <Text
-                      key={el.id + "-text"}
-                      text={el.text || "Text"}
-                      // place text box at element x and use element width so align works
-                      x={el.x}
-                      ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                      width={el.width ?? w}
-                      // allow height to be dynamic; fontSize remains default
-                      fontSize={el.fontSize ?? 24}
-                      align="center"
-                      // vertically center text inside the element using the element's font size
-                      y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2)}
-                      draggable
-                      fill={el.id === selectedId ? "blue" : "black"}
-                      onClick={() => selectElement(el.id)}
-                      visible={!(editing && editing.id === el.id)}
-                      onTransform={() => handleTransform(el.id)}
-                      onDblClick={(e) => {
-                        // show inline editor
-                        const absPos = e.target.getAbsolutePosition();
-                        const stageRect = stageRef.current?.container().getBoundingClientRect();
-                        const containerRect = containerRef.current?.getBoundingClientRect();
-                        const left = (stageRect?.left || 0) + absPos.x - (containerRect?.left || 0);
-                        const top = (stageRect?.top || 0) + absPos.y - (containerRect?.top || 0);
-                        const width = e.target.width() || (el.width ?? w);
-                        const height = e.target.height() || (el.height ?? h);
-                        setEditing({ id: el.id, text: el.text || "", left, top, width, height });
-                      }}
-                      onDragEnd={(e) => handleDrag(el.id, e)}
-                    />
-                    {el.id === selectedId && (
-                      <>
-                        {/* For text we rely on Transformer for resizing; no L-corner handles needed */}
-                      </>
-                    )}
-                  </React.Fragment>
-                );
-              }
-              if (el.type === "image")
-                return (
-                  <>
-                    <Rect
-                      key={el.id}
-                      x={el.x}
-                      y={el.y}
-                      width={el.width || 120}
-                      height={el.height || 80}
-                      ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                      fill={el.id === selectedId ? "#aaa" : "lightgray"}
-                      draggable
-                      onClick={() => selectElement(el.id)}
-                      onDragEnd={(e) => handleDrag(el.id, e)}
-                      onTransform={() => handleTransform(el.id)}
-                    />
-                    {el.id === selectedId && (
-                      <>
-                        {/* image handles unchanged */}
-                      </>
-                    )}
-                  </>
-                );
-              return null;
-            })}
-          </Layer>
-        </Stage>
+          {/* Delegated stage rendering */}
+          <CanvasStage
+            canvasWidth={canvasWidth}
+            canvasHeight={canvasHeight}
+            elements={elements}
+            selectedId={selectedId}
+            selectElement={selectElement}
+            updateElement={updateElement}
+            handleTransform={handleTransform}
+            getElDefaults={getElDefaults}
+            nodeRefsRef={nodeRefsRef}
+            trRef={trRef}
+            stageRef={stageRef}
+            handleDrag={handleDrag}
+            editing={editing}
+            setEditing={setEditing}
+            containerRef={containerRef}
+          />
+
+          {/* Inline editor delegated to its own component */}
+          <InlineTextEditor editing={editing} elements={elements} updateElement={updateElement} setEditing={setEditing} />
+
+          {/* Context menu (rendered when menuPos is set) */}
+          {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
+        </div>
       </div>
-
-      {/* inline editor for text elements */}
-      {editing && (() => {
-        const el = elements.find((x) => x.id === editing.id);
-        return (
-          <div
-            key={editing.id}
-            style={{
-              position: "absolute",
-              left: editing.left,
-              top: editing.top,
-              width: editing.width,
-              zIndex: 50,
-            }}
-          >
-            <textarea
-              autoFocus
-              value={editing.text}
-              onChange={(e) => {
-                const txt = e.target.value;
-                setEditing({ ...editing, text: txt });
-                updateElement(editing.id, { text: txt });
-              }}
-              onBlur={() => setEditing(null)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setEditing(null);
-              }}
-              style={{
-                width: "100%",
-                minHeight: editing.height,
-                resize: "vertical",
-                fontSize: (el?.fontSize || 24) + "px",
-                lineHeight: "1.1",
-                fontFamily: "inherit",
-                background: "transparent",
-                border: "1px solid rgba(0,0,0,0.12)",
-                padding: "2px",
-              }}
-            />
-          </div>
-        );
-      })()}
-
-      {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
-      </div>
-    </div>
     </div>
   );
 }

@@ -22,6 +22,23 @@ type Props = {
 export function CanvasStage(props: Props) {
   const { canvasWidth, canvasHeight, elements, selectedId, selectElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
 
+  const boundBox = (oldBox, newBox) => {
+    const MIN_SIZE = 5; // Set your desired minimum size
+
+    // If the new width is too small, revert to the minimum size
+    if (newBox.width < MIN_SIZE) {
+      newBox.width = MIN_SIZE;
+    }
+
+    // If the new height is too small, revert to the minimum size
+    if (newBox.height < MIN_SIZE) {
+      newBox.height = MIN_SIZE;
+    }
+
+    // Return the modified box
+    return newBox;
+  };
+
   return (
     <div style={{ width: canvasWidth, height: canvasHeight, background: '#f3f4f6', boxShadow: '0 0 0 1px rgba(0,0,0,0.08) inset' }}>
       <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
@@ -42,6 +59,8 @@ export function CanvasStage(props: Props) {
             rotationSnapAngle={0}
             rotateEnabled={false}
             enabledAnchors={["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]}
+            flipEnabled={false}
+            boundBoxFunc={boundBox}
           />
 
           {elements.map((el) => {

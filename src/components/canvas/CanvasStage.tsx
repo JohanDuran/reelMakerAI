@@ -1,0 +1,109 @@
+// NOTE: we rely on the automatic JSX runtime; no default React import required
+import { Stage, Layer, Text, Rect, Transformer } from 'react-konva';
+
+type Props = {
+  canvasWidth: number;
+  canvasHeight: number;
+  elements: any[];
+  selectedId: string | null;
+  selectElement: (id: string | null) => void;
+  handleTransform: (id: string) => void;
+  getElDefaults: (el: any) => { w: number; h: number };
+  nodeRefsRef: React.MutableRefObject<Record<string, any>>;
+  trRef: React.RefObject<any>;
+  stageRef: React.RefObject<any>;
+  handleDrag: (id: string, e: any) => void;
+  editing: null | { id: string };
+  setEditing: (v: any) => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+};
+
+// CanvasStage: renders the Konva Stage/Layer and all elements.
+export function CanvasStage(props: Props) {
+  const { canvasWidth, canvasHeight, elements, selectedId, selectElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
+
+  return (
+    <div style={{ width: canvasWidth, height: canvasHeight, background: '#f3f4f6', boxShadow: '0 0 0 1px rgba(0,0,0,0.08) inset' }}>
+      <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
+        <Layer>
+          {/* Transparent background rect - clicking clears selection */}
+          <Rect
+            x={0}
+            y={0}
+            width={canvasWidth}
+            height={canvasHeight}
+            fill="transparent"
+            onMouseDown={() => { selectElement(null); }}
+          />
+
+          <Transformer
+            ref={trRef}
+            keepRatio={true}
+            rotationSnapAngle={0}
+            rotateEnabled={false}
+            enabledAnchors={["top-left", "top-right", "middle-left", "middle-right", "bottom-left", "bottom-right"]}
+          />
+
+          {elements.map((el) => {
+            if (el.type === 'text') {
+              const { w, h } = getElDefaults(el);
+              return (
+                <>
+                  <Text
+                    key={el.id + '-text'}
+                    text={el.text || 'Text'}
+                    x={el.x}
+                    ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
+                    width={el.width ?? w}
+                    fontSize={el.fontSize ?? 24}
+                    align="center"
+                    y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2)}
+                    draggable
+                    fill={el.id === selectedId ? 'blue' : 'black'}
+                    onClick={() => selectElement(el.id)}
+                    visible={!(editing && editing.id === el.id)}
+                    onTransform={() => handleTransform(el.id)}
+                    onDblClick={(e) => {
+                      const absPos = e.target.getAbsolutePosition();
+                      const stageRect = stageRef.current?.container().getBoundingClientRect();
+                      const containerRect = containerRef.current?.getBoundingClientRect();
+                      const left = (stageRect?.left || 0) + absPos.x - (containerRect?.left || 0);
+                      const top = (stageRect?.top || 0) + absPos.y - (containerRect?.top || 0);
+                      const width = e.target.width() || (el.width ?? w);
+                      const height = e.target.height() || (el.height ?? h);
+                      setEditing({ id: el.id, text: el.text || '', left, top, width, height });
+                    }}
+                    onDragEnd={(e) => handleDrag(el.id, e)}
+                  />
+                </>
+              );
+            }
+
+            if (el.type === 'image') {
+              return (
+                <>
+                  <Rect
+                    x={el.x}
+                    y={el.y}
+                    width={el.width || 120}
+                    height={el.height || 80}
+                    ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
+                    fill={el.id === selectedId ? '#aaa' : 'lightgray'}
+                    draggable
+                    onClick={() => selectElement(el.id)}
+                    onDragEnd={(e) => handleDrag(el.id, e)}
+                    onTransform={() => handleTransform(el.id)}
+                  />
+                </>
+              );
+            }
+
+            return null;
+          })}
+        </Layer>
+      </Stage>
+    </div>
+  );
+}
+
+export default CanvasStage;

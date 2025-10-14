@@ -10,6 +10,8 @@ export function CanvasEditor() {
   
   const stageRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // ref attached to the component root so we can measure the parent (the Grid item)
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
@@ -73,21 +75,34 @@ export function CanvasEditor() {
     }
   }, [selectedId, elements]);
 
-  // compute scale so the canvas fits within the window (avoid scrolling)
+  // compute scale so the canvas fits within the parent Grid column (preserve aspect ratio)
   useEffect(() => {
     const compute = () => {
-      const paddingW = 80; // account for UI chrome/margins
-      const paddingH = 120;
-      const availW = Math.max(200, window.innerWidth - paddingW);
-      const availH = Math.max(200, window.innerHeight - paddingH);
+      const parent = wrapperRef.current?.parentElement as HTMLElement | null;
+      const paddingW = 32; // small padding inside grid column
+      const paddingH = 40;
+      const availW = parent ? Math.max(200, parent.clientWidth - paddingW) : Math.max(200, window.innerWidth - paddingW);
+      const availH = parent ? Math.max(200, parent.clientHeight - paddingH) : Math.max(200, window.innerHeight - paddingH);
       const targetW = canvasWidth + 40; // include outer padding used in layout
       const targetH = canvasHeight + 40;
       const f = Math.min(1, availW / targetW, availH / targetH);
       setScale(f);
     };
+
     compute();
-    window.addEventListener('resize', compute);
-    return () => window.removeEventListener('resize', compute);
+    let ro: ResizeObserver | null = null;
+    const parent = wrapperRef.current?.parentElement as HTMLElement | null;
+    if (parent && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => compute());
+      ro.observe(parent);
+    } else {
+      window.addEventListener('resize', compute);
+    }
+
+    return () => {
+      if (ro && parent) ro.unobserve(parent);
+      window.removeEventListener('resize', compute);
+    };
   }, [canvasWidth, canvasHeight]);
 
   // smooth transform handler: convert scale to fontSize and reset scale
@@ -231,22 +246,25 @@ export function CanvasEditor() {
   // NOTE: manual corner resize handler removed; resizing is handled by Transformer for text
 
   return (
-    <div style={{ transformOrigin: 'top left', transform: `scale(${scale})` }}>
+    <div ref={wrapperRef} style={{ height: '100%' }}>
+      {/* prevent the scaled wrapper from intercepting pointer events so dropdowns/buttons remain clickable */}
+      <div style={{ transformOrigin: 'top left', transform: `scale(${scale})`, pointerEvents: 'none' }}>
       <div
         ref={containerRef}
         className="relative border rounded-lg shadow-sm bg-gray-100 flex justify-center items-center"
         onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
-        style={{ width: canvasWidth + 40, height: canvasHeight + 40 }}
+        style={{ width: canvasWidth + 40, height: canvasHeight + 40, pointerEvents: 'auto' }}
       >
         {/* Aspect ratio dropdown (upper-right, outside canvas) */}
-  <div style={{ position: 'absolute', right: -60, top: 8 }}>
+  <div style={{ position: 'absolute', right: -60, top: 8, zIndex: 2000, pointerEvents: 'auto' }}>
           <FormControl size="small" variant="outlined" style={{ minWidth: 96, background: 'white', borderRadius: 6 }}>
             <InputLabel id="aspect-select-label">Ratio</InputLabel>
             <Select
               labelId="aspect-select-label"
               value={canvasHeight > canvasWidth ? '9:16' : '16:9'}
               label="Ratio"
-              onChange={(e: React.ChangeEvent<{ value: unknown }>) => setAspectRatio(e.target.value as '9:16' | '16:9')}
+              onChange={(e: any) => setAspectRatio(e.target.value as '9:16' | '16:9')}
+              MenuProps={{ disablePortal: true }}
             >
               <MenuItem value="9:16">9:16</MenuItem>
               <MenuItem value="16:9">16:9</MenuItem>
@@ -407,6 +425,7 @@ export function CanvasEditor() {
 
       {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
       </div>
+    </div>
     </div>
   );
 }

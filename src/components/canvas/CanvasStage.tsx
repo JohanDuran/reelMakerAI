@@ -1,5 +1,6 @@
 // NOTE: we rely on the automatic JSX runtime; no default React import required
-import { Stage, Layer, Text, Rect, Transformer } from 'react-konva';
+import { Stage, Layer, Text, Rect, Transformer, Image as KonvaImage } from 'react-konva';
+import useImage from 'use-image';
 
 type Props = {
   canvasWidth: number;
@@ -23,7 +24,7 @@ export function CanvasStage(props: Props) {
   const { canvasWidth, canvasHeight, elements, selectedId, selectElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
 
   const boundBox = (oldBox, newBox) => {
-    const MIN_SIZE = 5; // Set your desired minimum size
+    const MIN_SIZE = 25; // Set your desired minimum size
 
     // If the new width is too small, revert to the minimum size
     if (newBox.width < MIN_SIZE) {
@@ -38,6 +39,15 @@ export function CanvasStage(props: Props) {
     // Return the modified box
     return newBox;
   };
+
+  const URLImage = ({ src, ...rest }) => {
+    // useImage handles loading the image and returns the DOM Image object
+    const [image] = useImage(src, 'anonymous');
+
+    // Pass the loaded DOM Image object to the KonvaImage component
+    return <KonvaImage image={image} {...rest} />;
+  };
+  const imageUrl = 'https://konvajs.org/assets/yoda.jpg'; // Replace with your image URL
 
   return (
     <div style={{ width: canvasWidth, height: canvasHeight, background: '#f3f4f6', boxShadow: '0 0 0 1px rgba(0,0,0,0.08) inset' }}>
@@ -101,6 +111,25 @@ export function CanvasStage(props: Props) {
             if (el.type === 'image') {
               return (
                 <>
+                  <URLImage
+                    src={imageUrl}
+                    x={el.x}
+                    y={el.y}
+                    ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
+                    width={el.width || 120}
+                    height={el.height || 80}
+                    draggable
+                    onClick={() => selectElement(el.id)}
+                    onDragEnd={(e) => handleDrag(el.id, e)}
+                    onTransform={() => handleTransform(el.id)}
+
+                  />
+                </>
+              );
+            }
+            if (el.type === 'rectangle') {
+              return (
+                <>
                   <Rect
                     x={el.x}
                     y={el.y}
@@ -116,7 +145,6 @@ export function CanvasStage(props: Props) {
                 </>
               );
             }
-
             return null;
           })}
         </Layer>

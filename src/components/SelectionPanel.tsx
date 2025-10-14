@@ -20,6 +20,12 @@ export function SelectionPanel() {
         </Button>
         <Button
           variant="outlined"
+          onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120 })}
+        >
+          Add Rectangle
+        </Button>
+        <Button
+          variant="outlined"
           onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}
         >
           Add Image

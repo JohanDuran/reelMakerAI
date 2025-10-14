@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type EditorElement = {
   id: string;
-  type: "text" | "image";
+  type: "text" | "image" | "rectangle";
   x: number;
   y: number;
   width?: number;

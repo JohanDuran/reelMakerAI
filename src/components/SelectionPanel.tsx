@@ -1,4 +1,4 @@
-import React from 'react';
+// automatic JSX runtime used; no default React import required
 import { Button, Stack, Paper, Typography } from '@mui/material';
 import { useEditorStore } from '../store/useEditorStore';
 
@@ -20,7 +20,7 @@ export function SelectionPanel() {
         </Button>
         <Button
           variant="outlined"
-          onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120 })}
+          onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}
         >
           Add Rectangle
         </Button>

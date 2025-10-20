@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from "../store/useEditorStore";
 import { ContextMenu } from "./ContextMenu";
 import CanvasStage from './canvas/CanvasStage';
@@ -209,7 +209,7 @@ export function CanvasEditor() {
   // handle Delete key to remove selected element
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (e.key === 'Delete') {
         if (selectedId) {
           // remove element from store
           // import the removeElement action lazily to avoid circular issues
@@ -251,7 +251,6 @@ export function CanvasEditor() {
 
   return (
     <div className="canvas-wrapper" ref={wrapperRef}>
-      <CanvasControls canvasWidth={canvasWidth} canvasHeight={canvasHeight} setAspectRatio={setAspectRatio} />
       {/* scaled wrapper - pointerEvents none so controls are interactive */}
       <div className="canvas-scaled" style={{ transform: `scale(${scale})`, pointerEvents: 'none' }}>
         <div
@@ -260,6 +259,8 @@ export function CanvasEditor() {
           onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
           style={{ width: canvasWidth + 40, height: canvasHeight + 40, pointerEvents: 'auto' }}
         >
+          {/* Controls rendered at the edge of the canvas so they appear partially inside/outside */}
+          <CanvasControls canvasWidth={canvasWidth} canvasHeight={canvasHeight} setAspectRatio={setAspectRatio} />
           {/* Controls rendered outside the stage but inside the canvas container */}
 
           {/* Selection badge - shows a small badge for the selected element */}
@@ -283,7 +284,6 @@ export function CanvasEditor() {
             elements={elements}
             selectedId={selectedId}
             selectElement={selectElement}
-            updateElement={updateElement}
             handleTransform={handleTransform}
             getElDefaults={getElDefaults}
             nodeRefsRef={nodeRefsRef}

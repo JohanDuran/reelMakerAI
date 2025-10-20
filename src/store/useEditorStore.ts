@@ -8,6 +8,9 @@ export type EditorElement = {
   width?: number;
   height?: number;
   fontSize?: number;
+  fontColor?: string;
+  fillColor?: string;
+  align?: 'left' | 'center' | 'right';
   text?: string;
   src?: string;
 };
@@ -28,9 +31,9 @@ type EditorState = {
 export const useEditorStore = create<EditorState>((set) => ({
   elements: [],
   selectedId: null,
-  // default to 16:9 used previously (800x450)
-  canvasWidth: 800,
-  canvasHeight: 450,
+  // default to 9:16 (portrait) as the new default aspect ratio (450x800)
+  canvasWidth: 450,
+  canvasHeight: 800,
   addElement: (el) =>
     set((s) => {
       const newEl = { ...el, id: crypto.randomUUID() };

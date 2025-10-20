@@ -57,6 +57,47 @@ export function ElementInspector() {
             </>
           )}
 
+          {element.type === 'rectangle' && (
+            <>
+              <div className="text-sm font-medium text-gray-700">Fill</div>
+              <div>
+                <input
+                  type="color"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.fillColor || '#c7d2fe'}
+                  onChange={(e) => updateElement(element.id, { fillColor: e.target.value })}
+                />
+              </div>
+
+              <div className="text-sm font-medium text-gray-700">Font size</div>
+              <div>
+                <input
+                  type="number"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.fontSize || 16}
+                  onChange={(e) => updateElement(element.id, { fontSize: parseInt(e.target.value || '0') })}
+                />
+              </div>
+
+              <div className="text-sm font-medium text-gray-700">Color</div>
+              <div>
+                <input
+                  type="color"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.fontColor || '#000000'}
+                  onChange={(e) => updateElement(element.id, { fontColor: e.target.value })}
+                />
+              </div>
+
+              <div className="text-sm font-medium text-gray-700">Align</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className={`px-2 py-1 border rounded ${element.align === 'left' ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { align: 'left' })}>Left</button>
+                <button className={`px-2 py-1 border rounded ${element.align === 'center' ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { align: 'center' })}>Center</button>
+                <button className={`px-2 py-1 border rounded ${element.align === 'right' ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { align: 'right' })}>Right</button>
+              </div>
+            </>
+          )}
+
           <div className="text-sm font-medium text-gray-700">X</div>
           <div>
             <input

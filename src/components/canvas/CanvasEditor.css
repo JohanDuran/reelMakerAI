@@ -1,13 +1,23 @@
 /* Styles specific to the CanvasEditor and its child controls */
 .canvas-wrapper {
   height: 100%;
+  display: flex;
+  align-items: center; /* vertical centering within the column */
+  justify-content: center; /* horizontal centering within the column */
+  width: 100%;
 }
 
 .canvas-scaled {
-  transform-origin: top left;
+  /* Use center as transform-origin so scale keeps canvas centered */
+  transform-origin: center center;
   /* pointer-events handled inline in component for clarity */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .canvas-container {
   background: #f3f4f6;
+  /* make sure the container doesn't collapse and is centered by the parent */
+  box-sizing: border-box;
 }

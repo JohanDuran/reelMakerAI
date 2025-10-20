@@ -1,6 +1,7 @@
 // NOTE: we rely on the automatic JSX runtime; no default React import required
 import { Stage, Layer, Text, Rect, Transformer, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
+import { useEditorStore } from '../../store/useEditorStore';
 
 type Props = {
   canvasWidth: number;
@@ -8,6 +9,7 @@ type Props = {
   elements: any[];
   selectedId: string | null;
   selectElement: (id: string | null) => void;
+  updateElement: (id: string, updates: Partial<any>) => void;
   handleTransform: (id: string) => void;
   getElDefaults: (el: any) => { w: number; h: number };
   nodeRefsRef: React.MutableRefObject<Record<string, any>>;
@@ -21,7 +23,7 @@ type Props = {
 
 // CanvasStage: renders the Konva Stage/Layer and all elements.
 export function CanvasStage(props: Props) {
-  const { canvasWidth, canvasHeight, elements, selectedId, selectElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
+  const { canvasWidth, canvasHeight, elements, selectedId, selectElement, updateElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
 
   const boundBox = (_oldBox: any, newBox: any): any => {
     const MIN_SIZE = 25; // Set your desired minimum size
@@ -47,10 +49,10 @@ export function CanvasStage(props: Props) {
     // Pass the loaded DOM Image object to the KonvaImage component
     return <KonvaImage image={image} {...rest} />;
   };
-  const imageUrl = 'https://konvajs.org/assets/yoda.jpg'; // Replace with your image URL
+  // images will use the element's `src` field (data URL or remote URL)
 
   return (
-    <div style={{ width: canvasWidth, height: canvasHeight, background: '#f3f4f6', boxShadow: '0 0 0 1px rgba(0,0,0,0.08) inset' }}>
+    <div style={{ position: 'relative', width: canvasWidth, height: canvasHeight, background: '#f3f4f6', boxShadow: '0 0 0 1px rgba(0,0,0,0.08) inset' }}>
       <Stage width={canvasWidth} height={canvasHeight} ref={stageRef}>
         <Layer>
           {/* Transparent background rect - clicking clears selection */}
@@ -168,46 +170,85 @@ export function CanvasStage(props: Props) {
             }
 
             if (el.type === 'image') {
+              const src = el.src || null;
               return (
                 <>
-                  <URLImage
-                    src={imageUrl}
-                    x={el.x}
-                    y={el.y}
-                    ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                    width={el.width || 120}
-                    height={el.height || 80}
-                    draggable
-                    onClick={() => selectElement(el.id)}
-                    onDragEnd={(e: any) => handleDrag(el.id, e)}
-                    onTransform={() => handleTransform(el.id)}
-
-                  />
+                  {src ? (
+                    <URLImage
+                      src={src}
+                      x={el.x}
+                      y={el.y}
+                      ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
+                      width={el.width || 120}
+                      height={el.height || 80}
+                      draggable
+                      onClick={() => selectElement(el.id)}
+                      onDragEnd={(e: any) => handleDrag(el.id, e)}
+                      onTransform={() => handleTransform(el.id)}
+                    />
+                  ) : (
+                    // placeholder rect with upload hint when no image is selected
+                    <Rect
+                      x={el.x}
+                      y={el.y}
+                      width={el.width || 120}
+                      height={el.height || 80}
+                      fill="#efefef"
+                      stroke="#ccc"
+                      dash={[4, 4]}
+                      onClick={() => selectElement(el.id)}
+                    />
+                  )}
                 </>
               );
             }
-            if (el.type === 'rectangle') {
-              return (
-                <>
-                  <Rect
-                    x={el.x}
-                    y={el.y}
-                    width={el.width || 120}
-                    height={el.height || 80}
-                    ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                    fill={el.fillColor ?? (el.id === selectedId ? '#aaa' : 'lightgray')}
-                    draggable
-                    onClick={() => selectElement(el.id)}
-                    onDragEnd={(e: any) => handleDrag(el.id, e)}
-                    onTransform={() => handleTransform(el.id)}
-                  />
-                </>
-              );
-            }
+            
             return null;
           })}
         </Layer>
       </Stage>
+      {/* HTML overlays for image placeholders so users can click Upload directly on canvas */}
+      {elements.filter((e) => e.type === 'image' && !e.src).map((el) => (
+        <div key={el.id + '-upload'} style={{ position: 'absolute', left: el.x || 0, top: el.y || 0, width: (el.width || 120), height: (el.height || 80), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
+          <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.92)', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}>
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(ev) => {
+                  const f = (ev.target as HTMLInputElement).files?.[0];
+                  if (!f) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const result = reader.result as string;
+                    const img = new Image();
+                    img.onload = () => {
+                      updateElement(el.id, { src: result, width: img.naturalWidth, height: img.naturalHeight });
+                    };
+                    img.src = result;
+                  };
+                  reader.readAsDataURL(f);
+                }}
+              />
+              Upload
+            </label>
+
+            {/* delete button top-right inside the overlay */}
+            <button
+              onClick={(ev) => {
+                ev.stopPropagation();
+                const state = useEditorStore.getState();
+                state.removeElement(el.id);
+              }}
+              title="Delete element"
+              style={{ position: 'absolute', right: 6, top: 6, zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 4, padding: '4px 6px', cursor: 'pointer' }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

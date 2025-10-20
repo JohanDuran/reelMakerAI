@@ -120,6 +120,29 @@ export function ElementInspector() {
 
           {element.type === 'image' && (
             <>
+              <div className="text-sm font-medium text-gray-700">Image</div>
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (ev) => {
+                    const f = (ev.target as HTMLInputElement).files?.[0];
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = reader.result as string;
+                      // measure natural size
+                      const img = new Image();
+                      img.onload = () => {
+                        updateElement(element.id, { src: result, width: img.naturalWidth, height: img.naturalHeight });
+                      };
+                      img.src = result;
+                    };
+                    reader.readAsDataURL(f);
+                  }}
+                />
+              </div>
+
               <div className="text-sm font-medium text-gray-700">Width</div>
               <div>
                 <input

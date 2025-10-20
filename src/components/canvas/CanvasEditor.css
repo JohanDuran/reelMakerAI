@@ -2,22 +2,38 @@
 .canvas-wrapper {
   height: 100%;
   display: flex;
-  align-items: center; /* vertical centering within the column */
+  align-items: flex-start; /* align to top of the column */
   justify-content: center; /* horizontal centering within the column */
   width: 100%;
 }
 
 .canvas-scaled {
-  /* Use center as transform-origin so scale keeps canvas centered */
-  transform-origin: center center;
+  /* Use top center as transform-origin so scale keeps canvas anchored to the top */
+  transform-origin: top center;
   /* pointer-events handled inline in component for clarity */
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 20px;
 }
 
 .canvas-container {
   background: #f3f4f6;
   /* make sure the container doesn't collapse and is centered by the parent */
   box-sizing: border-box;
+}
+
+/* Prevent the canvas from exceeding the viewport: allow the wrapper to scroll when content is larger */
+/* Keep scaled content constrained to parent width */
+.canvas-scaled {
+  max-width: 100%;
+}
+
+/* Prevent scrollbars and clip if necessary — scaling logic will scale down before clipping normally */
+.canvas-wrapper {
+  overflow: hidden;
+}
+
+.canvas-container {
+  overflow: visible; /* allow overlays to show; main clipping controlled by wrapper */
 }

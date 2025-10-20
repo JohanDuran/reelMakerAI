@@ -15,6 +15,7 @@ export function CanvasEditor() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text?: string; left: number; top: number; width: number; height: number }>(null);
@@ -83,26 +84,36 @@ export function CanvasEditor() {
       const parent = wrapperRef.current?.parentElement as HTMLElement | null;
       const paddingW = 32; // small padding inside grid column
       const paddingH = 40;
+      // Use parent width but constrain available height to the viewport height so canvas always fits the screen
       const availW = parent ? Math.max(200, parent.clientWidth - paddingW) : Math.max(200, window.innerWidth - paddingW);
-      const availH = parent ? Math.max(200, parent.clientHeight - paddingH) : Math.max(200, window.innerHeight - paddingH);
+      const viewportH = Math.max(200, window.innerHeight - paddingH);
+      // don't rely on parent's height; use viewport height to avoid scrollbars and force scaling to fit
+      const availH = viewportH;
       const targetW = canvasWidth + 40; // include outer padding used in layout
       const targetH = canvasHeight + 40;
       const f = Math.min(1, availW / targetW, availH / targetH);
+      // collect some DOM sizes for debugging
+      const containerH = containerRef.current?.clientHeight ?? null;
+      const parentH = parent?.clientHeight ?? null;
+      const info = { availW, availH, targetW, targetH, scale: f, containerH, parentH };
+      // log to console to aid debugging in browser
+      // eslint-disable-next-line no-console
+      console.debug('[CanvasEditor] scale compute', info);
+      setDebugInfo(info);
       setScale(f);
     };
 
     compute();
     let ro: ResizeObserver | null = null;
-    const parent = wrapperRef.current?.parentElement as HTMLElement | null;
-    if (parent && typeof ResizeObserver !== 'undefined') {
+    // observe window resizes so we can recompute scale when viewport changes
+    if (typeof ResizeObserver !== 'undefined' && wrapperRef.current?.parentElement) {
       ro = new ResizeObserver(() => compute());
-      ro.observe(parent);
-    } else {
-      window.addEventListener('resize', compute);
+      ro.observe(wrapperRef.current.parentElement);
     }
+    window.addEventListener('resize', compute);
 
     return () => {
-      if (ro && parent) ro.unobserve(parent);
+      if (ro && wrapperRef.current?.parentElement) ro.unobserve(wrapperRef.current.parentElement);
       window.removeEventListener('resize', compute);
     };
   }, [canvasWidth, canvasHeight]);
@@ -284,6 +295,7 @@ export function CanvasEditor() {
             elements={elements}
             selectedId={selectedId}
             selectElement={selectElement}
+            updateElement={updateElement}
             handleTransform={handleTransform}
             getElDefaults={getElDefaults}
             nodeRefsRef={nodeRefsRef}
@@ -297,6 +309,16 @@ export function CanvasEditor() {
 
           {/* Inline editor delegated to its own component */}
           <InlineTextEditor editing={editing} elements={elements} updateElement={updateElement} setEditing={setEditing} />
+
+          {/* Debug overlay - removed in production; helps identify sizing constraints */}
+          {debugInfo && (
+            <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.7)', color: 'white', padding: 8, borderRadius: 6, fontSize: 11, pointerEvents: 'none' }}>
+              <div>scale: {debugInfo.scale.toFixed(3)}</div>
+              <div>availW: {debugInfo.availW}, availH: {debugInfo.availH}</div>
+              <div>targetW: {debugInfo.targetW}, targetH: {debugInfo.targetH}</div>
+              <div>containerH: {debugInfo.containerH}, parentH: {debugInfo.parentH}</div>
+            </div>
+          )}
 
           {/* Context menu (rendered when menuPos is set) */}
           {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}

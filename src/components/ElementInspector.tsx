@@ -59,6 +59,15 @@ export function ElementInspector() {
 
           {element.type === 'rectangle' && (
             <>
+              <div className="text-sm font-medium text-gray-700">Text</div>
+              <div>
+                <input
+                  type="text"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.text || ''}
+                  onChange={(e) => updateElement(element.id, { text: e.target.value })}
+                />
+              </div>
               <div className="text-sm font-medium text-gray-700">Fill</div>
               <div>
                 <input

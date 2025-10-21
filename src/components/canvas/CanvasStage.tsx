@@ -1,6 +1,24 @@
 // NOTE: we rely on the automatic JSX runtime; no default React import required
-import { Stage, Layer, Text, Rect, Transformer, Image as KonvaImage } from 'react-konva';
-import useImage from 'use-image';
+import { Stage, Layer, Group, Text, Rect, Transformer, Image as KonvaImage } from 'react-konva';
+// small local replacement for the `use-image` package to avoid resolution issues in dev environment
+import React from 'react';
+function useImage(src?: string | null, crossOrigin?: string | null) {
+  const [image, setImage] = React.useState<HTMLImageElement | undefined>(undefined);
+  React.useEffect(() => {
+    if (!src) {
+      setImage(undefined);
+      return;
+    }
+    let mounted = true;
+    const img = new Image();
+    if (crossOrigin) img.crossOrigin = crossOrigin;
+    img.onload = () => { if (mounted) setImage(img); };
+    img.onerror = () => { if (mounted) setImage(undefined); };
+    img.src = src;
+    return () => { mounted = false; };
+  }, [src, crossOrigin]);
+  return [image];
+}
 import { useEditorStore } from '../../store/useEditorStore';
 
 type Props = {
@@ -115,56 +133,50 @@ export function CanvasStage(props: Props) {
               const { w, h } = getElDefaults(el);
               return (
                 <>
-                  <Rect
-                    key={el.id + '-rect'}
+                  <Group
+                    key={el.id + '-group'}
                     x={el.x}
                     y={el.y}
-                    width={el.width || w}
-                    height={el.height || h}
-                    ref={(n) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                    fill={el.fillColor ?? (el.id === selectedId ? '#e2e8f0' : '#c7d2fe')}
-                    stroke={el.id === selectedId ? '#6366f1' : undefined}
-                    strokeWidth={el.id === selectedId ? 2 : 0}
                     draggable
+                    ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
                     onClick={() => selectElement(el.id)}
-                    onDragEnd={(e) => handleDrag(el.id, e)}
+                    onDragEnd={(e: any) => handleDrag(el.id, e)}
                     onTransform={() => handleTransform(el.id)}
-                    onDblClick={(e) => {
-                      // open inline editor positioned over the rectangle
-                      const absPos = e.target.getAbsolutePosition();
-                      const stageRect = stageRef.current?.container().getBoundingClientRect();
-                      const containerRect = containerRef.current?.getBoundingClientRect();
-                      const left = (stageRect?.left || 0) + absPos.x - (containerRect?.left || 0);
-                      const top = (stageRect?.top || 0) + absPos.y - (containerRect?.top || 0);
-                      const width = e.target.width() || (el.width || w);
-                      const height = e.target.height() || (el.height || h);
-                      setEditing({ id: el.id, text: el.text || '', left, top, width, height });
-                    }}
-                  />
-
-                  {/* Show text over the rectangle; hide while inline editing */}
-                  <Text
-                    key={el.id + '-label'}
-                    text={el.text || ''}
-                    x={el.x}
-                    y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 16)) / 2)}
-                    width={el.width ?? w}
-                    fontSize={el.fontSize ?? 16}
-                    align={el.align ?? 'center'}
-                    fill={el.fontColor ?? 'black'}
-                    visible={!(editing && editing.id === el.id)}
-                    onClick={() => selectElement(el.id)}
                     onDblClick={(e: any) => {
                       const absPos = e.target.getAbsolutePosition();
                       const stageRect = stageRef.current?.container().getBoundingClientRect();
                       const containerRect = containerRef.current?.getBoundingClientRect();
                       const left = (stageRect?.left || 0) + absPos.x - (containerRect?.left || 0);
                       const top = (stageRect?.top || 0) + absPos.y - (containerRect?.top || 0);
-                      const width = e.target.width() || (el.width || w);
-                      const height = e.target.height() || (el.height || h);
+                      const width = e.target.width ? e.target.width() : (el.width || w);
+                      const height = e.target.height ? e.target.height() : (el.height || h);
                       setEditing({ id: el.id, text: el.text || '', left, top, width, height });
                     }}
-                  />
+                  >
+                    <Rect
+                      key={el.id + '-rect'}
+                      x={0}
+                      y={0}
+                      width={el.width || w}
+                      height={el.height || h}
+                      fill={el.fillColor ?? (el.id === selectedId ? '#e2e8f0' : '#c7d2fe')}
+                      stroke={el.id === selectedId ? '#6366f1' : undefined}
+                      strokeWidth={el.id === selectedId ? 2 : 0}
+                    />
+
+                    {/* Show text over the rectangle; hide while inline editing. Text doesn't handle dragging now. */}
+                    <Text
+                      key={el.id + '-label'}
+                      text={el.text || ''}
+                      x={0}
+                      y={((el.height ?? h) - (el.fontSize ?? 16)) / 2}
+                      width={el.width ?? w}
+                      fontSize={el.fontSize ?? 16}
+                      align={el.align ?? 'center'}
+                      fill={el.fontColor ?? 'black'}
+                      visible={!(editing && editing.id === el.id)}
+                    />
+                  </Group>
                 </>
               );
             }

@@ -24,6 +24,8 @@ type EditorState = {
   addElement: (el: Omit<EditorElement, "id">) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   removeElement: (id: string) => void;
+  bringForward: (id: string) => void;
+  sendBackward: (id: string) => void;
   selectElement: (id: string | null) => void;
   setAspectRatio: (ratio: "9:16" | "16:9") => void;
 };
@@ -36,7 +38,8 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasHeight: 800,
   addElement: (el) =>
     set((s) => {
-      const newEl = { ...el, id: crypto.randomUUID() };
+      // ensure rectangles have a text field (empty by default)
+      const newEl = { ...el, id: crypto.randomUUID(), ...(el.type === 'rectangle' ? { text: el.text ?? '' } : {}) };
       return { elements: [...s.elements, newEl], selectedId: newEl.id };
     }),
   updateElement: (id, updates) =>
@@ -50,6 +53,29 @@ export const useEditorStore = create<EditorState>((set) => ({
       elements: s.elements.filter((e) => e.id !== id),
       selectedId: s.selectedId === id ? null : s.selectedId,
     })),
+  // move the element one step forward in the stacking order (towards end of array)
+  bringForward: (id: string) =>
+    set((s) => {
+      const idx = s.elements.findIndex((e) => e.id === id);
+      if (idx === -1 || idx >= s.elements.length - 1) return {} as any;
+      const arr = s.elements.slice();
+      const tmp = arr[idx + 1];
+      arr[idx + 1] = arr[idx];
+      arr[idx] = tmp;
+      return { elements: arr } as any;
+    }),
+  // move the element one step backward in the stacking order (towards start of array)
+  sendBackward: (id: string) =>
+    set((s) => {
+      const idx = s.elements.findIndex((e) => e.id === id);
+      if (idx <= 0) return {} as any;
+      const arr = s.elements.slice();
+      const tmp = arr[idx - 1];
+      arr[idx - 1] = arr[idx];
+      arr[idx] = tmp;
+      // if we moved the selected element backward, selection remains
+      return { elements: arr } as any;
+    }),
   selectElement: (id) => set({ selectedId: id }),
   setAspectRatio: (ratio) =>
     set(() => {

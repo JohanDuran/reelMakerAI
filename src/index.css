@@ -19,6 +19,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark-theme friendly form controls */
+input[type="text"], input[type="number"], select, textarea {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
 /* Minimal utility classes used by the project to avoid build-time errors
    (These are lightweight fallbacks until a proper utility framework is wired.) */
 .w-full { width: 100%; }

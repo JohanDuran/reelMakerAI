@@ -99,7 +99,8 @@ export const useEditorStore = create<EditorState>((set) => ({
       // if we moved the selected element backward, selection remains
       return { elements: arr } as any;
     }),
-  selectElement: (id) => set({ selectedId: id }),
+  // When selecting an element, show element properties (hide canvas-level properties)
+  selectElement: (id) => set(() => ({ selectedId: id, showCanvaProperties: false })),
   setCanvasBackground: (src) => set(() => ({ canvasBackground: src })),
   setCanvasBackgroundFile: (f) => set(() => ({ canvasBackgroundFile: f })),
   setCanvasBackgroundRepeat: (v) => set(() => ({ canvasBackgroundRepeat: v })),

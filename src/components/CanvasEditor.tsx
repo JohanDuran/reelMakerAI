@@ -5,6 +5,7 @@ import CanvasStage from './canvas/CanvasStage';
 import CanvasControls from './canvas/CanvasControls';
 import InlineTextEditor from './canvas/InlineTextEditor';
 import './canvas/CanvasEditor.css';
+import CardPanel from './ui/CardPanel';
 
 export function CanvasEditor() {
   const { elements, updateElement, selectElement, selectedId, canvasWidth, canvasHeight, setAspectRatio } = useEditorStore();
@@ -19,7 +20,7 @@ export function CanvasEditor() {
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text?: string; left: number; top: number; width: number; height: number }>(null);
-  const { showCanvaProperties, setShowCanvaProperties, canvasBackground, setCanvasBackground } = useEditorStore();
+  // canvas properties visibility is now controlled when selecting elements via the store
   const measureQueueRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number | null>(null);
   const prevFontsRef = useRef<Record<string, number>>({});
@@ -234,6 +235,23 @@ export function CanvasEditor() {
     return () => window.removeEventListener('keydown', onKey);
   }, [selectedId]);
 
+  // ESC key: show canvas properties and clear selection
+  useEffect(() => {
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        const { setShowCanvaProperties, selectElement } = useEditorStore.getState();
+        selectElement(null);
+        setShowCanvaProperties(true);
+      }
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, []);
+
+  // Click outside the canvas: when user clicks outside the canvas container, show canvas properties
+  // (Removed) clicking anywhere on the page no longer opens canvas properties.
+  // Canvas properties are opened by pressing ESC or by clicking a blank area inside the canvas.
+
   // when fontSize is changed via inspector, measure and update box height so handles move
   useEffect(() => {
     elements.forEach((el) => {
@@ -273,8 +291,7 @@ export function CanvasEditor() {
         >
           {/* Controls rendered at the edge of the canvas so they appear partially inside/outside */}
           <CanvasControls canvasWidth={canvasWidth} canvasHeight={canvasHeight} setAspectRatio={setAspectRatio} />
-          {/* small Canva button to open canvas-level properties (left side) */}
-          <button style={{ position: 'absolute', left: 8, top: 8, zIndex: 40, padding: '6px 8px', borderRadius: 6, background: 'white', border: '1px solid rgba(0,0,0,0.08)' }} onClick={() => setShowCanvaProperties(!showCanvaProperties)}>Canva</button>
+          {/* Canva button removed - canvas properties are shown automatically when an element is selected */}
           {/* Controls rendered outside the stage but inside the canvas container */}
 
           {/* Selection badge - shows a small badge for the selected element */}
@@ -283,10 +300,10 @@ export function CanvasEditor() {
             if (!el) return null;
             return (
               <div style={{ position: 'absolute', right: 120, top: -28 }}>
-                <div style={{ background: 'white', border: '1px solid rgba(0,0,0,0.08)', padding: '6px 8px', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.06)', fontSize: 12 }}>
-                  {el.type === 'text' ? `Text — ${el.fontSize || 24}px` : `Image — ${el.width || 0}×${el.height || 0}`} &nbsp;
-                  <span style={{ color: '#888' }}>(Del)</span>
-                </div>
+                <CardPanel style={{ display: 'inline-flex', padding: '6px 8px', borderRadius: 6 }}>
+                  <div style={{ fontSize: 12 }}>{el.type === 'text' ? `Text — ${el.fontSize || 24}px` : `Image — ${el.width || 0}×${el.height || 0}`}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.6)', marginLeft: 8 }}>(Del)</div>
+                </CardPanel>
               </div>
             );
           })()}

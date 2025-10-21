@@ -119,7 +119,7 @@ export function CanvasStage(props: Props) {
                     fontStyle={`${el.italic ? 'italic' : 'normal'}`}
                     fontWeight={el.bold ? 'bold' : 'normal'}
                     // Konva doesn't have a direct underline prop; we'll keep underline flag on the element
-                    onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
+                    onClick={() => { selectElement(el.id); }}
                     visible={!(editing && editing.id === el.id)}
                     onTransform={() => handleTransform(el.id)}
                     onDblClick={(e: any) => {
@@ -162,7 +162,7 @@ export function CanvasStage(props: Props) {
                     y={el.y}
                     draggable
                     ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                    onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
+                    onClick={() => { selectElement(el.id); }}
                     onDragEnd={(e: any) => handleDrag(el.id, e)}
                     onTransform={() => handleTransform(el.id)}
                     onDblClick={(e: any) => {
@@ -228,7 +228,7 @@ export function CanvasStage(props: Props) {
                         width={el.width || 120}
                       height={el.height || 80}
                       draggable
-                        onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
+                        onClick={() => { selectElement(el.id); }}
                       onDragEnd={(e: any) => handleDrag(el.id, e)}
                       onTransform={() => handleTransform(el.id)}
                     />
@@ -242,7 +242,7 @@ export function CanvasStage(props: Props) {
                       fill="#efefef"
                       stroke="#ccc"
                       dash={[4, 4]}
-                      onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
+                      onClick={() => { selectElement(el.id); }}
                     />
                   )}
                 </>
@@ -254,8 +254,41 @@ export function CanvasStage(props: Props) {
         </Layer>
       </Stage>
       {/* HTML overlays for image placeholders so users can click Upload directly on canvas */}
+      {/* HTML overlays for image placeholders so users can click Upload directly on canvas */}
       {elements.filter((e) => e.type === 'image' && !e.src).map((el) => (
-        <div key={el.id + '-upload'} onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }} style={{ position: 'absolute', left: el.x || 0, top: el.y || 0, width: (el.width || 120), height: (el.height || 80), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
+        <div
+          key={el.id + '-upload'}
+          onClick={() => { selectElement(el.id); }}
+          onMouseDown={(ev) => {
+            // allow clicking on nested controls (label/input/button) without starting a drag
+            const tgt = ev.target as HTMLElement | null;
+            if (tgt && (tgt.closest('label') || tgt.closest('input') || tgt.closest('button'))) return;
+            // start drag
+            ev.stopPropagation();
+            selectElement(el.id);
+            const rect = containerRef.current?.getBoundingClientRect();
+            const scale = rect ? rect.width / canvasWidth : 1;
+            const startX = ev.clientX;
+            const startY = ev.clientY;
+            const origX = el.x || 0;
+            const origY = el.y || 0;
+
+            const onMove = (m: MouseEvent) => {
+              const dx = (m.clientX - startX) / scale;
+              const dy = (m.clientY - startY) / scale;
+              updateElement(el.id, { x: Math.max(0, Math.round(origX + dx)), y: Math.max(0, Math.round(origY + dy)) });
+            };
+
+            const onUp = () => {
+              window.removeEventListener('mousemove', onMove);
+              window.removeEventListener('mouseup', onUp);
+            };
+
+            window.addEventListener('mousemove', onMove);
+            window.addEventListener('mouseup', onUp);
+          }}
+          style={{ position: 'absolute', left: el.x || 0, top: el.y || 0, width: (el.width || 120), height: (el.height || 80), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}
+        >
           <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.92)', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}>
               <input

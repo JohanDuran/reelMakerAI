@@ -10,13 +10,14 @@ type Props = {
 export function CanvasControls({ canvasWidth, canvasHeight, setAspectRatio }: Props) {
   return (
     <div style={{position: 'absolute', right: -30, top: 0, zIndex: 2000, pointerEvents: 'auto' }}>
-      <FormControl size="small" variant="outlined" style={{ background: 'white', borderRadius: 6 }}>
-        <InputLabel id="aspect-select-label">Ratio</InputLabel>
+      {/* Use a light control surface with dark text so it remains readable over the pale canvas */}
+      <FormControl size="small" variant="outlined" sx={{ backgroundColor: 'rgba(255,255,255,0.94)', borderRadius: 1, color: '#111', minWidth: 60 }}>
         <Select
           labelId="aspect-select-label"
           value={canvasHeight > canvasWidth ? '9:16' : '16:9'}
           label="Ratio"
           onChange={(e: any) => setAspectRatio(e.target.value as '9:16' | '16:9')}
+          sx={{ color: '#111', '& .MuiSelect-icon': { color: '#111' } }}
           MenuProps={{
             // Render to body so Popper can position relative to viewport (correct when parents are transformed)
             disablePortal: false,

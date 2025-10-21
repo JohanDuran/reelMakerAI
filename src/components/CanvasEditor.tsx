@@ -16,7 +16,6 @@ export function CanvasEditor() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [scale, setScale] = useState<number>(1);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text?: string; left: number; top: number; width: number; height: number }>(null);
@@ -98,10 +97,9 @@ export function CanvasEditor() {
       const containerH = containerRef.current?.clientHeight ?? null;
       const parentH = parent?.clientHeight ?? null;
       const info = { availW, availH, targetW, targetH, scale: f, containerH, parentH };
-      // log to console to aid debugging in browser
-      // eslint-disable-next-line no-console
-      console.debug('[CanvasEditor] scale compute', info);
-      setDebugInfo(info);
+  // log to console to aid debugging in browser
+  // eslint-disable-next-line no-console
+  console.debug('[CanvasEditor] scale compute', info);
       setScale(f);
     };
 
@@ -286,7 +284,21 @@ export function CanvasEditor() {
         <div
           ref={containerRef}
           className="canvas-container relative border rounded-lg shadow-sm flex justify-center items-center"
-          onContextMenu={(e) => { e.preventDefault(); setMenuPos({ x: (e as any).clientX, y: (e as any).clientY }); }}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            // compute position relative to the container so the menu can be clamped inside
+            const rect = (containerRef.current as HTMLElement).getBoundingClientRect();
+            const clientX = (e as any).clientX;
+            const clientY = (e as any).clientY;
+            const relX = Math.round(clientX - rect.left);
+            const relY = Math.round(clientY - rect.top);
+            // clamp to container bounds minus an approximate menu size (160x200)
+            const menuW = 180;
+            const menuH = 200;
+            const clampedX = Math.max(8, Math.min(relX, (rect.width - menuW - 8)));
+            const clampedY = Math.max(8, Math.min(relY, (rect.height - menuH - 8)));
+            setMenuPos({ x: clampedX, y: clampedY });
+          }}
           style={{ width: canvasWidth + 40, height: canvasHeight + 40, pointerEvents: 'auto' }}
         >
           {/* Controls rendered at the edge of the canvas so they appear partially inside/outside */}
@@ -330,15 +342,7 @@ export function CanvasEditor() {
           {/* Inline editor delegated to its own component */}
           <InlineTextEditor editing={editing} elements={elements} updateElement={updateElement} setEditing={setEditing} />
 
-          {/* Debug overlay - removed in production; helps identify sizing constraints */}
-          {debugInfo && (
-            <div style={{ position: 'absolute', left: 8, bottom: 8, background: 'rgba(0,0,0,0.7)', color: 'white', padding: 8, borderRadius: 6, fontSize: 11, pointerEvents: 'none' }}>
-              <div>scale: {debugInfo.scale.toFixed(3)}</div>
-              <div>availW: {debugInfo.availW}, availH: {debugInfo.availH}</div>
-              <div>targetW: {debugInfo.targetW}, targetH: {debugInfo.targetH}</div>
-              <div>containerH: {debugInfo.containerH}, parentH: {debugInfo.parentH}</div>
-            </div>
-          )}
+          {/* Debug overlay removed — debugInfo still collected but not shown by default. */}
 
           {/* Context menu (rendered when menuPos is set) */}
           {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}

@@ -4,7 +4,7 @@ import { Paper } from '@mui/material';
 
 export function ElementInspector() {
   const { elements, selectedId, updateElement } = useEditorStore();
-  const { showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile } = useEditorStore();
+  const { showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat } = useEditorStore();
   const canvasInputRef = useRef<HTMLInputElement | null>(null);
   const element = elements.find((e) => e.id === selectedId);
 
@@ -52,8 +52,12 @@ export function ElementInspector() {
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <div className="text-sm font-medium text-gray-700">Canvas meta</div>
+            <div className="text-sm font-medium text-gray-700">AI Background</div>
             <input type="text" className="w-full border rounded px-2 py-1" value={canvasMeta || ''} onChange={(e) => setCanvasMeta(e.target.value)} />
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input id="bg-repeat" type="checkbox" checked={!!canvasBackgroundRepeat} onChange={(e) => setCanvasBackgroundRepeat(e.target.checked)} />
+              <label htmlFor="bg-repeat" style={{ fontSize: 13 }}>Background repeat</label>
+            </div>
           </div>
 
           {/* if an image element is selected, allow using it as canvas background */}
@@ -129,6 +133,15 @@ export function ElementInspector() {
                   onChange={(e) => updateElement(element.id, { width: parseInt(e.target.value || '0') })}
                 />
               </div>
+              <div className="text-sm font-medium text-gray-700">AI text</div>
+              <div>
+                <input
+                  type="text"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.aiText || ''}
+                  onChange={(e) => updateElement(element.id, { aiText: e.target.value })}
+                />
+              </div>
             </>
           )}
 
@@ -182,25 +195,7 @@ export function ElementInspector() {
             </>
           )}
 
-          <div className="text-sm font-medium text-gray-700">X</div>
-          <div>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1"
-              value={element.x}
-              onChange={(e) => updateElement(element.id, { x: parseInt(e.target.value || '0') })}
-            />
-          </div>
-
-          <div className="text-sm font-medium text-gray-700">Y</div>
-          <div>
-            <input
-              type="number"
-              className="w-full border rounded px-2 py-1"
-              value={element.y}
-              onChange={(e) => updateElement(element.id, { y: parseInt(e.target.value || '0') })}
-            />
-          </div>
+          {/* X and Y are stored in state but intentionally hidden from the inspector UI */}
 
           {element.type === 'image' && (
             <>
@@ -247,6 +242,15 @@ export function ElementInspector() {
                   className="w-full border rounded px-2 py-1"
                   value={element.height}
                   onChange={(e) => updateElement(element.id, { height: parseInt(e.target.value || '0') })}
+                />
+              </div>
+              <div className="text-sm font-medium text-gray-700">AI image</div>
+              <div>
+                <input
+                  type="text"
+                  className="w-full border rounded px-2 py-1"
+                  value={element.aiImage || ''}
+                  onChange={(e) => updateElement(element.id, { aiImage: e.target.value })}
                 />
               </div>
             </>

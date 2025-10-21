@@ -42,7 +42,7 @@ type Props = {
 // CanvasStage: renders the Konva Stage/Layer and all elements.
 export function CanvasStage(props: Props) {
   const { canvasWidth, canvasHeight, elements, selectedId, selectElement, updateElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
-  const { canvasBackground } = useEditorStore();
+  const { canvasBackground, setShowCanvaProperties } = useEditorStore();
 
   const boundBox = (_oldBox: any, newBox: any): any => {
     const MIN_SIZE = 25; // Set your desired minimum size
@@ -81,7 +81,7 @@ export function CanvasStage(props: Props) {
             width={canvasWidth}
             height={canvasHeight}
             fill="transparent"
-            onMouseDown={() => { selectElement(null); }}
+            onMouseDown={() => { selectElement(null); setShowCanvaProperties(true); }}
           />
 
           <Transformer
@@ -115,7 +115,7 @@ export function CanvasStage(props: Props) {
                     y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2)}
                     draggable
                     fill={el.id === selectedId ? 'blue' : 'black'}
-                    onClick={() => selectElement(el.id)}
+                    onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
                     visible={!(editing && editing.id === el.id)}
                     onTransform={() => handleTransform(el.id)}
                     onDblClick={(e: any) => {
@@ -145,7 +145,7 @@ export function CanvasStage(props: Props) {
                     y={el.y}
                     draggable
                     ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                    onClick={() => selectElement(el.id)}
+                    onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
                     onDragEnd={(e: any) => handleDrag(el.id, e)}
                     onTransform={() => handleTransform(el.id)}
                     onDblClick={(e: any) => {
@@ -197,10 +197,10 @@ export function CanvasStage(props: Props) {
                       x={el.x}
                       y={el.y}
                       ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
-                      width={el.width || 120}
+                        width={el.width || 120}
                       height={el.height || 80}
                       draggable
-                      onClick={() => selectElement(el.id)}
+                        onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
                       onDragEnd={(e: any) => handleDrag(el.id, e)}
                       onTransform={() => handleTransform(el.id)}
                     />
@@ -214,7 +214,7 @@ export function CanvasStage(props: Props) {
                       fill="#efefef"
                       stroke="#ccc"
                       dash={[4, 4]}
-                      onClick={() => selectElement(el.id)}
+                      onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
                     />
                   )}
                 </>
@@ -227,7 +227,7 @@ export function CanvasStage(props: Props) {
       </Stage>
       {/* HTML overlays for image placeholders so users can click Upload directly on canvas */}
       {elements.filter((e) => e.type === 'image' && !e.src).map((el) => (
-        <div key={el.id + '-upload'} style={{ position: 'absolute', left: el.x || 0, top: el.y || 0, width: (el.width || 120), height: (el.height || 80), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
+        <div key={el.id + '-upload'} onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }} style={{ position: 'absolute', left: el.x || 0, top: el.y || 0, width: (el.width || 120), height: (el.height || 80), display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
           <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.92)', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.08)', cursor: 'pointer' }}>
               <input

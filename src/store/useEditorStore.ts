@@ -14,6 +14,8 @@ export type EditorElement = {
   text?: string;
   src?: string;
   fileName?: string;
+  aiText?: string;
+  aiImage?: string;
 };
 
 type EditorState = {
@@ -25,6 +27,7 @@ type EditorState = {
   // canvas-level properties
   canvasBackground?: string | null; // data URL or remote URL
   canvasBackgroundFile?: File | null; // original File object for uploaded background (cleared on remove)
+  canvasBackgroundRepeat?: boolean;
   canvasMeta?: string; // arbitrary text to send to backend
   showCanvaProperties: boolean;
   addElement: (el: Omit<EditorElement, "id">) => void;
@@ -34,6 +37,7 @@ type EditorState = {
   sendBackward: (id: string) => void;
   setCanvasBackground: (src: string | null) => void;
   setCanvasBackgroundFile: (f: File | null) => void;
+  setCanvasBackgroundRepeat: (v: boolean) => void;
   setCanvasMeta: (text: string) => void;
   setShowCanvaProperties: (v: boolean) => void;
   selectElement: (id: string | null) => void;
@@ -48,6 +52,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasHeight: 800,
   canvasBackground: null,
   canvasBackgroundFile: null,
+  canvasBackgroundRepeat: false,
   canvasMeta: '',
   showCanvaProperties: false,
   addElement: (el) =>
@@ -93,6 +98,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectElement: (id) => set({ selectedId: id }),
   setCanvasBackground: (src) => set(() => ({ canvasBackground: src })),
   setCanvasBackgroundFile: (f) => set(() => ({ canvasBackgroundFile: f })),
+  setCanvasBackgroundRepeat: (v) => set(() => ({ canvasBackgroundRepeat: v })),
   setCanvasMeta: (text) => set(() => ({ canvasMeta: text })),
   setShowCanvaProperties: (v: boolean) => set({ showCanvaProperties: v }),
   setAspectRatio: (ratio) =>

@@ -13,6 +13,7 @@ export type EditorElement = {
   align?: 'left' | 'center' | 'right';
   text?: string;
   src?: string;
+  fileName?: string;
 };
 
 type EditorState = {
@@ -21,11 +22,20 @@ type EditorState = {
   // canvas dimensions (in px)
   canvasWidth: number;
   canvasHeight: number;
+  // canvas-level properties
+  canvasBackground?: string | null; // data URL or remote URL
+  canvasBackgroundFile?: File | null; // original File object for uploaded background (cleared on remove)
+  canvasMeta?: string; // arbitrary text to send to backend
+  showCanvaProperties: boolean;
   addElement: (el: Omit<EditorElement, "id">) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   removeElement: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
+  setCanvasBackground: (src: string | null) => void;
+  setCanvasBackgroundFile: (f: File | null) => void;
+  setCanvasMeta: (text: string) => void;
+  setShowCanvaProperties: (v: boolean) => void;
   selectElement: (id: string | null) => void;
   setAspectRatio: (ratio: "9:16" | "16:9") => void;
 };
@@ -36,6 +46,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   // default to 9:16 (portrait) as the new default aspect ratio (450x800)
   canvasWidth: 450,
   canvasHeight: 800,
+  canvasBackground: null,
+  canvasBackgroundFile: null,
+  canvasMeta: '',
+  showCanvaProperties: false,
   addElement: (el) =>
     set((s) => {
       // ensure rectangles have a text field (empty by default)
@@ -77,6 +91,10 @@ export const useEditorStore = create<EditorState>((set) => ({
       return { elements: arr } as any;
     }),
   selectElement: (id) => set({ selectedId: id }),
+  setCanvasBackground: (src) => set(() => ({ canvasBackground: src })),
+  setCanvasBackgroundFile: (f) => set(() => ({ canvasBackgroundFile: f })),
+  setCanvasMeta: (text) => set(() => ({ canvasMeta: text })),
+  setShowCanvaProperties: (v: boolean) => set({ showCanvaProperties: v }),
   setAspectRatio: (ratio) =>
     set(() => {
       if (ratio === "9:16") {

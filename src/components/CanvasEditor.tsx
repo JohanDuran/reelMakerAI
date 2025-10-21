@@ -19,6 +19,7 @@ export function CanvasEditor() {
   const nodeRefsRef = useRef<Record<string, any>>({});
   const trRef = useRef<any>(null);
   const [editing, setEditing] = useState<null | { id: string; text?: string; left: number; top: number; width: number; height: number }>(null);
+  const { showCanvaProperties, setShowCanvaProperties, canvasBackground, setCanvasBackground } = useEditorStore();
   const measureQueueRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number | null>(null);
   const prevFontsRef = useRef<Record<string, number>>({});
@@ -272,6 +273,8 @@ export function CanvasEditor() {
         >
           {/* Controls rendered at the edge of the canvas so they appear partially inside/outside */}
           <CanvasControls canvasWidth={canvasWidth} canvasHeight={canvasHeight} setAspectRatio={setAspectRatio} />
+          {/* small Canva button to open canvas-level properties (left side) */}
+          <button style={{ position: 'absolute', left: 8, top: 8, zIndex: 40, padding: '6px 8px', borderRadius: 6, background: 'white', border: '1px solid rgba(0,0,0,0.08)' }} onClick={() => setShowCanvaProperties(!showCanvaProperties)}>Canva</button>
           {/* Controls rendered outside the stage but inside the canvas container */}
 
           {/* Selection badge - shows a small badge for the selected element */}
@@ -322,6 +325,7 @@ export function CanvasEditor() {
 
           {/* Context menu (rendered when menuPos is set) */}
           {menuPos && <ContextMenu position={menuPos} onClose={() => setMenuPos(null)} />}
+          {/* canvas properties are rendered in the ElementInspector now */}
         </div>
       </div>
     </div>

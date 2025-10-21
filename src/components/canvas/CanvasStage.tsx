@@ -42,6 +42,7 @@ type Props = {
 // CanvasStage: renders the Konva Stage/Layer and all elements.
 export function CanvasStage(props: Props) {
   const { canvasWidth, canvasHeight, elements, selectedId, selectElement, updateElement, handleTransform, getElDefaults, nodeRefsRef, trRef, stageRef, handleDrag, editing, setEditing, containerRef } = props;
+  const { canvasBackground } = useEditorStore();
 
   const boundBox = (_oldBox: any, newBox: any): any => {
     const MIN_SIZE = 25; // Set your desired minimum size
@@ -92,6 +93,11 @@ export function CanvasStage(props: Props) {
             flipEnabled={false}
             boundBoxFunc={boundBox}
           />
+
+          {/* render canvas background first (if set) */}
+          {canvasBackground && (
+            <URLImage src={canvasBackground} x={0} y={0} width={canvasWidth} height={canvasHeight} listening={false} />
+          )}
 
           {elements.map((el) => {
             if (el.type === 'text') {

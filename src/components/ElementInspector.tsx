@@ -1,9 +1,84 @@
+import React, { useRef } from 'react';
 import { useEditorStore } from "../store/useEditorStore";
 import { Paper } from '@mui/material';
 
 export function ElementInspector() {
   const { elements, selectedId, updateElement } = useEditorStore();
+  const { showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile } = useEditorStore();
+  const canvasInputRef = useRef<HTMLInputElement | null>(null);
   const element = elements.find((e) => e.id === selectedId);
+
+  // If canvas properties panel is open, render that instead of the element inspector
+  if (showCanvaProperties) {
+    return (
+      <Paper elevation={1} style={{ width: '100%', height: '100%', padding: 16, display: 'flex', flexDirection: 'column' }}>
+        <div className="w-64 border-l bg-white p-4">
+          <h3 className="font-semibold mb-3">Canva Properties</h3>
+
+          <div style={{ marginBottom: 12 }}>
+            <div className="text-sm font-medium text-gray-700">Background image</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                ref={canvasInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(ev) => {
+                  const f = (ev.target as HTMLInputElement).files?.[0];
+                  if (!f) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    const result = reader.result as string;
+                    setCanvasBackground(result);
+                    // store the original File object so we keep a reference unless removed
+                    try { setCanvasBackgroundFile(f); } catch (e) { /* ignore */ }
+                  };
+                  reader.readAsDataURL(f);
+                }}
+              />
+            </div>
+            {canvasBackground && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: 6 }}>
+                  <button className="px-2 py-1 border rounded" onClick={() => {
+                    setCanvasBackground(null);
+                    // clear stored file reference too
+                    try { setCanvasBackgroundFile(null); } catch (e) { /* ignore */ }
+                    // clear the canvas file input so users can upload again
+                    try { if (canvasInputRef.current) canvasInputRef.current.value = ''; } catch (e) { /* ignore */ }
+                  }}>Remove</button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div className="text-sm font-medium text-gray-700">Canvas meta</div>
+            <input type="text" className="w-full border rounded px-2 py-1" value={canvasMeta || ''} onChange={(e) => setCanvasMeta(e.target.value)} />
+          </div>
+
+          {/* if an image element is selected, allow using it as canvas background */}
+          {selId && (() => {
+            const selEl = elements.find((x) => x.id === selId);
+            if (selEl && selEl.type === 'image' && selEl.src) {
+                    return (
+                <div>
+                  <div className="text-sm font-medium text-gray-700">Use selected image</div>
+                  <div style={{ marginTop: 6 }}>
+                    <button className="px-2 py-1 border rounded" onClick={() => {
+                      setCanvasBackground(selEl.src as string);
+                      // clear any stored File reference because the background is now from an existing element
+                      try { setCanvasBackgroundFile(null); } catch (e) { /* ignore */ }
+                    }}>Use as background</button>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      </Paper>
+    );
+  }
 
   if (!element)
     return (
@@ -131,25 +206,28 @@ export function ElementInspector() {
             <>
               <div className="text-sm font-medium text-gray-700">Image</div>
               <div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={async (ev) => {
-                    const f = (ev.target as HTMLInputElement).files?.[0];
-                    if (!f) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      const result = reader.result as string;
-                      // measure natural size
-                      const img = new Image();
-                      img.onload = () => {
-                        updateElement(element.id, { src: result, width: img.naturalWidth, height: img.naturalHeight });
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={async (ev) => {
+                      const f = (ev.target as HTMLInputElement).files?.[0];
+                      if (!f) return;
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        const result = reader.result as string;
+                        // measure natural size
+                        const img = new Image();
+                        img.onload = () => {
+                          updateElement(element.id, { src: result, width: img.naturalWidth, height: img.naturalHeight, fileName: f.name });
+                        };
+                        img.src = result;
                       };
-                      img.src = result;
-                    };
-                    reader.readAsDataURL(f);
-                  }}
-                />
+                      reader.readAsDataURL(f);
+                    }}
+                  />
+                
+                </div>
               </div>
 
               <div className="text-sm font-medium text-gray-700">Width</div>

@@ -1,5 +1,5 @@
 // NOTE: we rely on the automatic JSX runtime; no default React import required
-import { Stage, Layer, Group, Text, Rect, Transformer, Image as KonvaImage } from 'react-konva';
+import { Stage, Layer, Group, Text, Rect, Transformer, Image as KonvaImage, Line } from 'react-konva';
 // small local replacement for the `use-image` package to avoid resolution issues in dev environment
 import React from 'react';
 function useImage(src?: string | null, crossOrigin?: string | null) {
@@ -111,10 +111,14 @@ export function CanvasStage(props: Props) {
                     ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
                     width={el.width ?? w}
                     fontSize={el.fontSize ?? 24}
-                    align="center"
+                    align={el.align ?? 'center'}
                     y={(el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2)}
                     draggable
-                    fill={el.id === selectedId ? 'blue' : 'black'}
+                    fill={el.fontColor ?? (el.id === selectedId ? 'blue' : 'black')}
+                    fontFamily={el.fontFamily || 'Arial'}
+                    fontStyle={`${el.italic ? 'italic' : 'normal'}`}
+                    fontWeight={el.bold ? 'bold' : 'normal'}
+                    // Konva doesn't have a direct underline prop; we'll keep underline flag on the element
                     onClick={() => { setShowCanvaProperties(false); selectElement(el.id); }}
                     visible={!(editing && editing.id === el.id)}
                     onTransform={() => handleTransform(el.id)}
@@ -130,6 +134,19 @@ export function CanvasStage(props: Props) {
                     }}
                     onDragEnd={(e) => handleDrag(el.id, e)}
                   />
+                  {el.underline && (
+                    <Line
+                      points={[
+                        (el.x ?? 0),
+                        (el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2) + (el.fontSize ?? 24) + 2,
+                        (el.x ?? 0) + (el.width ?? w),
+                        (el.y ?? 0) + (((el.height ?? h) - (el.fontSize ?? 24)) / 2) + (el.fontSize ?? 24) + 2,
+                      ]}
+                      stroke={el.fontColor ?? 'black'}
+                      strokeWidth={2}
+                      listening={false}
+                    />
+                  )}
                 </>
               );
             }
@@ -181,7 +198,18 @@ export function CanvasStage(props: Props) {
                       align={el.align ?? 'center'}
                       fill={el.fontColor ?? 'black'}
                       visible={!(editing && editing.id === el.id)}
+                      fontFamily={el.fontFamily || 'Arial'}
+                      fontStyle={`${el.italic ? 'italic' : 'normal'}`}
+                      fontWeight={el.bold ? 'bold' : 'normal'}
                     />
+                    {el.underline && (
+                      <Line
+                        points={[0, ((el.height ?? h) - (el.fontSize ?? 16)) / 2 + (el.fontSize ?? 16) + 2, (el.width ?? w), ((el.height ?? h) - (el.fontSize ?? 16)) / 2 + (el.fontSize ?? 16) + 2]}
+                        stroke={el.fontColor ?? 'black'}
+                        strokeWidth={2}
+                        listening={false}
+                      />
+                    )}
                   </Group>
                 </>
               );
@@ -234,19 +262,15 @@ export function CanvasStage(props: Props) {
                 type="file"
                 accept="image/*"
                 style={{ display: 'none' }}
-                onChange={(ev) => {
+                onChange={async (ev) => {
                   const f = (ev.target as HTMLInputElement).files?.[0];
                   if (!f) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const result = reader.result as string;
-                    const img = new Image();
-                    img.onload = () => {
-                      updateElement(el.id, { src: result, width: img.naturalWidth, height: img.naturalHeight });
-                    };
-                    img.src = result;
+                  const result = await (await import('../../utils/readFile')).readFileAsDataURL(f);
+                  const img = new Image();
+                  img.onload = () => {
+                    updateElement(el.id, { src: result, width: img.naturalWidth, height: img.naturalHeight });
                   };
-                  reader.readAsDataURL(f);
+                  img.src = result;
                 }}
               />
               Upload

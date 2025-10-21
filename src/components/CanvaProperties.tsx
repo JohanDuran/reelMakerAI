@@ -1,15 +1,16 @@
 import React from 'react';
-import { Paper, Button } from '@mui/material';
+import CardPanel from './ui/CardPanel';
 import { useEditorStore } from '../store/useEditorStore';
+import { readFileAsDataURL } from '../utils/readFile';
 
 export function CanvaProperties({ onClose }: { onClose: () => void }) {
   const { canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta } = useEditorStore();
 
   return (
-    <Paper elevation={3} style={{ position: 'absolute', right: 8, top: 48, width: 320, padding: 12, zIndex: 60 }}>
+    <CardPanel style={{ position: 'absolute', right: 8, top: 48, width: 320, padding: 12, zIndex: 60 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <div style={{ fontWeight: 600 }}>Canva properties</div>
-        <Button size="small" onClick={onClose}>Close</Button>
+        <button style={{ padding: '4px 8px' }} onClick={onClose}>Close</button>
       </div>
 
       <div style={{ marginBottom: 8 }}>
@@ -17,22 +18,18 @@ export function CanvaProperties({ onClose }: { onClose: () => void }) {
         <input
           type="file"
           accept="image/*"
-          onChange={(ev) => {
+          onChange={async (ev) => {
             const f = (ev.target as HTMLInputElement).files?.[0];
             if (!f) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              setCanvasBackground(result);
-            };
-            reader.readAsDataURL(f);
+            const result = await readFileAsDataURL(f);
+            setCanvasBackground(result);
           }}
         />
         {canvasBackground && (
           <div style={{ marginTop: 8 }}>
             <img src={canvasBackground} alt="canvas bg" style={{ maxWidth: '100%', borderRadius: 4 }} />
             <div style={{ marginTop: 6 }}>
-              <Button size="small" variant="outlined" onClick={() => setCanvasBackground(null)}>Remove</Button>
+              <button style={{ padding: '6px 8px', border: '1px solid rgba(0,0,0,0.12)', background: 'white' }} onClick={() => setCanvasBackground(null)}>Remove</button>
             </div>
           </div>
         )}
@@ -49,8 +46,8 @@ export function CanvaProperties({ onClose }: { onClose: () => void }) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <Button size="small" onClick={onClose}>Done</Button>
+        <button style={{ padding: '6px 10px' }} onClick={onClose}>Done</button>
       </div>
-    </Paper>
+    </CardPanel>
   );
 }

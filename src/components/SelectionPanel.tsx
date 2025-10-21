@@ -1,38 +1,21 @@
 // automatic JSX runtime used; no default React import required
-import { Button, Stack, Paper, Typography } from '@mui/material';
+import CardPanel from './ui/CardPanel';
 import { useEditorStore } from '../store/useEditorStore';
 
 export function SelectionPanel() {
   const { addElement } = useEditorStore();
 
   return (
-    <Paper elevation={1} style={{ width: '100%', height: '100%', padding: 16, display: 'flex', flexDirection: 'column' }}>
-      <Typography variant="h6" gutterBottom>
-        Add
-      </Typography>
+    <CardPanel>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>Add</div>
 
-      <Stack direction="row" spacing={1} style={{ marginBottom: 12 }}>
-        <Button
-          variant="contained"
-          onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}
-        >
-          Add Text
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}
-        >
-          Add Rectangle
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}
-        >
-          Add Image
-        </Button>
-      </Stack>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button style={{ padding: '8px 12px', background: '#6366f1', color: 'white', borderRadius: 6, border: 'none' }} onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Add Text</button>
+        <button style={{ padding: '8px 12px', background: 'white', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 6 }} onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Add Rectangle</button>
+        <button style={{ padding: '8px 12px', background: 'white', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 6 }} onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Add Image</button>
+      </div>
 
       {/* Recent section removed as requested */}
-    </Paper>
+    </CardPanel>
   );
 }

@@ -1,17 +1,17 @@
 import React, { useRef } from 'react';
 import { useEditorStore } from "../store/useEditorStore";
-import { Paper } from '@mui/material';
+import CardPanel from './ui/CardPanel';
+import { readFileAsDataURL } from '../utils/readFile';
 
 export function ElementInspector() {
-  const { elements, selectedId, updateElement } = useEditorStore();
-  const { showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat } = useEditorStore();
+  const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat } = useEditorStore();
   const canvasInputRef = useRef<HTMLInputElement | null>(null);
   const element = elements.find((e) => e.id === selectedId);
 
   // If canvas properties panel is open, render that instead of the element inspector
   if (showCanvaProperties) {
     return (
-      <Paper elevation={1} style={{ width: '100%', height: '100%', padding: 16, display: 'flex', flexDirection: 'column' }}>
+      <CardPanel>
         <div className="w-64 border-l bg-white p-4">
           <h3 className="font-semibold mb-3">Canva Properties</h3>
 
@@ -22,17 +22,13 @@ export function ElementInspector() {
                 ref={canvasInputRef}
                 type="file"
                 accept="image/*"
-                onChange={(ev) => {
+                onChange={async (ev) => {
                   const f = (ev.target as HTMLInputElement).files?.[0];
                   if (!f) return;
-                  const reader = new FileReader();
-                  reader.onload = () => {
-                    const result = reader.result as string;
-                    setCanvasBackground(result);
-                    // store the original File object so we keep a reference unless removed
-                    try { setCanvasBackgroundFile(f); } catch (e) { /* ignore */ }
-                  };
-                  reader.readAsDataURL(f);
+                  const result = await readFileAsDataURL(f);
+                  setCanvasBackground(result);
+                  // store the original File object so we keep a reference unless removed
+                  try { setCanvasBackgroundFile(f); } catch (e) { /* ignore */ }
                 }}
               />
             </div>
@@ -80,24 +76,24 @@ export function ElementInspector() {
             return null;
           })()}
         </div>
-      </Paper>
+      </CardPanel>
     );
   }
 
   if (!element)
     return (
-      <Paper elevation={1} style={{ width: '100%', height: '100%', padding: 16, display: 'flex', flexDirection: 'column' }}>
+      <CardPanel>
         <div className="flex justify-center items-center text-gray-500">
           No element selected
         </div>
-      </Paper>
+      </CardPanel>
     );
 
   // Grid layout: two columns - label (fixed) and control (flexible)
   const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: '96px 1fr', columnGap: '12px', rowGap: '10px', alignItems: 'center' };
 
   return (
-    <Paper elevation={1} style={{ width: '100%', height: '100%', padding: 16, display: 'flex', flexDirection: 'column' }}>
+    <CardPanel>
       <div className="w-64 border-l bg-white p-4">
         <h3 className="font-semibold mb-3">Element Inspector</h3>
 
@@ -124,15 +120,35 @@ export function ElementInspector() {
                 />
               </div>
 
-              <div className="text-sm font-medium text-gray-700">Width</div>
+              <div className="text-sm font-medium text-gray-700">Color</div>
               <div>
                 <input
-                  type="number"
+                  type="color"
                   className="w-full border rounded px-2 py-1"
-                  value={element.width}
-                  onChange={(e) => updateElement(element.id, { width: parseInt(e.target.value || '0') })}
+                  value={element.fontColor || '#000000'}
+                  onChange={(e) => updateElement(element.id, { fontColor: e.target.value })}
                 />
               </div>
+
+              <div className="text-sm font-medium text-gray-700">Font family</div>
+              <div>
+                <select className="w-full border rounded px-2 py-1" value={element.fontFamily || 'Arial'} onChange={(e) => updateElement(element.id, { fontFamily: e.target.value })}>
+                  <option>Arial</option>
+                  <option>Roboto</option>
+                  <option>Helvetica</option>
+                  <option>Georgia</option>
+                  <option>Times New Roman</option>
+                  <option>Courier New</option>
+                </select>
+              </div>
+
+              <div className="text-sm font-medium text-gray-700">Style</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className={`px-2 py-1 border rounded ${element.bold ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { bold: !element.bold })}>B</button>
+                <button className={`px-2 py-1 border rounded ${element.italic ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { italic: !element.italic })}><i>I</i></button>
+                <button className={`px-2 py-1 border rounded ${element.underline ? 'bg-gray-200' : ''}`} onClick={() => updateElement(element.id, { underline: !element.underline })}>U</button>
+              </div>
+
               <div className="text-sm font-medium text-gray-700">AI text</div>
               <div>
                 <input
@@ -257,6 +273,6 @@ export function ElementInspector() {
           )}
         </div>
       </div>
-    </Paper>
+    </CardPanel>
   );
 }

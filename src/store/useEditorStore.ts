@@ -9,6 +9,10 @@ export type EditorElement = {
   height?: number;
   fontSize?: number;
   fontColor?: string;
+  fontFamily?: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
   fillColor?: string;
   align?: 'left' | 'center' | 'right';
   text?: string;

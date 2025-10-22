@@ -30,6 +30,12 @@ export type EditorGroup = {
   id: string;
   name?: string;
   aiTopic?: string;
+  // TTS and timing fields for Multiple Option template
+  ttsMode?: 'question_and_answer' | 'question_only' | 'question_options_and_answer' | 'question_and_correct_answer_only';
+  clipDuration?: number; // seconds
+  ttsQuestionDuration?: boolean;
+  answerDuration?: number; // seconds
+  ttsAnswerDuration?: boolean;
 };
 
 type EditorState = {
@@ -88,7 +94,7 @@ export const useEditorStore = create<EditorState>((set) => ({
     }),
   addGroup: (g) => {
     const id = g.id ?? crypto.randomUUID();
-    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic };
+    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic, ttsMode: (g as any).ttsMode, clipDuration: (g as any).clipDuration, ttsQuestionDuration: (g as any).ttsQuestionDuration, answerDuration: (g as any).answerDuration, ttsAnswerDuration: (g as any).ttsAnswerDuration };
     set((s) => ({ groups: { ...s.groups, [id]: group } } as any));
     return id;
   },

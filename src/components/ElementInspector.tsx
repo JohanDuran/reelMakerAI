@@ -106,14 +106,50 @@ export function ElementInspector() {
 
         <div style={gridStyle}>
           {/* If a group is explicitly selected from the hierarchy, show group-level properties here */}
-          {selectedGroupId && groups[selectedGroupId] && (
-            <>
+          {selectedGroupId && groups[selectedGroupId] && (() => {
+            const sg = groups[selectedGroupId];
+            return (
+              <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>AI Topic</div>
               <div>
-                <input type="text" style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={groups[selectedGroupId].aiTopic || ''} onChange={(e) => updateGroup(selectedGroupId as string, { aiTopic: e.target.value })} />
+                <input type="text" style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.aiTopic || ''} onChange={(e) => updateGroup(selectedGroupId as string, { aiTopic: e.target.value })} />
               </div>
-            </>
-          )}
+              <div style={{ fontSize: 12, fontWeight: 600 }}>TTS</div>
+              <div>
+                <Select
+                  value={sg.ttsMode || 'question_and_answer'}
+                  onChange={(e) => updateGroup(selectedGroupId as string, { ttsMode: e.target.value as any })}
+                  displayEmpty
+                  size="small"
+                  style={{ width: '100%', padding: 4, height: 36, lineHeight: '20px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  MenuProps={{ PaperProps: { style: { background: 'rgba(0,0,0,0.8)', color: 'inherit' } } }}
+                >
+                  <MenuItem value="question_and_answer">Question and correct answer only</MenuItem>
+                  <MenuItem value="question_only">Question only</MenuItem>
+                  <MenuItem value="question_options_and_answer">Question/options and correct answer</MenuItem>
+                  <MenuItem value="question_and_correct_answer_only">Question and correct answer only</MenuItem>
+                </Select>
+              </div>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>Question duration (s)</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.clipDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { clipDuration: parseFloat(e.target.value || '0') })} disabled={!!sg.ttsQuestionDuration} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={!!sg.ttsQuestionDuration} onChange={(e) => updateGroup(selectedGroupId as string, { ttsQuestionDuration: e.target.checked })} />
+                    <span style={{ fontSize: 12 }}>TTS based</span>
+                  </label>
+                </div>
+
+                <div style={{ fontSize: 12, fontWeight: 600 }}>Answer duration (s)</div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.answerDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { answerDuration: parseFloat(e.target.value || '0') })} disabled={!!sg.ttsAnswerDuration} />
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="checkbox" checked={!!sg.ttsAnswerDuration} onChange={(e) => updateGroup(selectedGroupId as string, { ttsAnswerDuration: e.target.checked })} />
+                    <span style={{ fontSize: 12 }}>TTS based</span>
+                  </label>
+                </div>
+              </>
+            );
+          })()}
           {element && element.type === 'text' && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Text</div>
@@ -166,10 +202,10 @@ export function ElementInspector() {
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 600 }}>Style</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={{ ...(toggleBase), ...(element.bold ? toggleActive : {}) }} onClick={() => updateElement(element.id, { bold: !element.bold })}>B</button>
-                <button style={{ ...(toggleBase), ...(element.italic ? toggleActive : {}) }} onClick={() => updateElement(element.id, { italic: !element.italic })}><i>I</i></button>
-                <button style={{ ...(toggleBase), ...(element.underline ? toggleActive : {}) }} onClick={() => updateElement(element.id, { underline: !element.underline })}>U</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button style={{ ...(toggleBase), ...(element.bold ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { bold: !element.bold })}>B</button>
+                <button style={{ ...(toggleBase), ...(element.italic ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { italic: !element.italic })}><i>I</i></button>
+                <button style={{ ...(toggleBase), ...(element.underline ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { underline: !element.underline })}>U</button>
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 600 }}>AI text</div>
@@ -271,10 +307,10 @@ export function ElementInspector() {
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 600 }}>Align</div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button style={{ ...(toggleBase), ...(element.align === 'left' ? toggleActive : {}) }} onClick={() => updateElement(element.id, { align: 'left' })}>Left</button>
-                <button style={{ ...(toggleBase), ...(element.align === 'center' ? toggleActive : {}) }} onClick={() => updateElement(element.id, { align: 'center' })}>Center</button>
-                <button style={{ ...(toggleBase), ...(element.align === 'right' ? toggleActive : {}) }} onClick={() => updateElement(element.id, { align: 'right' })}>Right</button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button style={{ ...(toggleBase), ...(element.align === 'left' ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { align: 'left' })}>Left</button>
+                <button style={{ ...(toggleBase), ...(element.align === 'center' ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { align: 'center' })}>Center</button>
+                <button style={{ ...(toggleBase), ...(element.align === 'right' ? toggleActive : {}), padding: '6px 8px' }} onClick={() => updateElement(element.id, { align: 'right' })}>Right</button>
               </div>
             </>
           )}

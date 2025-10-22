@@ -3,7 +3,7 @@ import CardPanel from './ui/CardPanel';
 import { useEditorStore } from '../store/useEditorStore';
 import { useState } from 'react';
 import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
+import Grid from '@mui/material/Grid';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -11,22 +11,32 @@ import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
 
 export function SelectionPanel() {
-  const { addElement, elements, removeElement, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId } = useEditorStore();
+  const { addElement, elements, removeElement, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId, showCanvaProperties, setShowCanvaProperties } = useEditorStore();
   const [showModal, setShowModal] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+
+  // safe reference to the group being deleted (avoids indexing with null)
+  const deletingGroup = groupToDelete ? groups[groupToDelete] : null;
 
   return (
     <CardPanel>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>Add</div>
 
-      <Stack direction="row" spacing={1} sx={{ marginBottom: 2 }}>
-        <Button variant="outlined" onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Add Text</Button>
-        <Button variant="outlined" onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Add Rectangle</Button>
-        <Button variant="outlined" onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Add Image</Button>
-  <Button variant="outlined" onClick={() => addElement({ type: 'aiImage', x: 120, y: 120, width: 240, height: 160, text: '', aiImagePrompt: '' })}>Add AI Image</Button>
-        <Button
-          variant="outlined"
-          onClick={() => {
+  <Grid container spacing={1} sx={{ marginBottom: 2 }}>
+    <Grid item xs={6}>
+      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Text</Button>
+    </Grid>
+    <Grid item xs={6}>
+      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Rectangle</Button>
+    </Grid>
+    <Grid item xs={6}>
+      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Image</Button>
+    </Grid>
+    <Grid item xs={6}>
+      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'aiImage', x: 120, y: 120, width: 240, height: 160, text: '', aiImagePrompt: '' })}>AI Image</Button>
+    </Grid>
+    <Grid item xs={6}>
+      <Button fullWidth variant="outlined" onClick={() => {
             // if there's already a Multiple Option group, show error modal
             const hasMultiple = Object.values(groups).some((g) => g.name === 'Multiple Option');
             if (hasMultiple) {
@@ -38,8 +48,17 @@ export function SelectionPanel() {
             const ids = elements.map((e) => e.id);
             ids.forEach((id) => removeElement(id));
 
-            // Create a group for this multiple option question
-            const groupId = useEditorStore.getState().addGroup({ name: 'Multiple Option', aiTopic: '' });
+            // Create a group for this multiple option question with TTS defaults
+            const groupId = useEditorStore.getState().addGroup({
+              name: 'Multiple Option',
+              aiTopic: '',
+              // default TTS mode and durations
+              ttsMode: 'question_and_answer',
+              clipDuration: 10,
+              ttsQuestionDuration: false,
+              answerDuration: 3,
+              ttsAnswerDuration: false,
+            });
 
             // Layout: center rectangles based on canvasWidth
             const cw = canvasWidth || 450;
@@ -64,10 +83,13 @@ export function SelectionPanel() {
             }
             // Select the group so its properties (AI Topic) are shown in the inspector
             selectGroup(groupId);
-          }}
-        >
-          Multiple Option
-        </Button>
+      }}>Multiple Option</Button>
+    </Grid>
+    <Grid item xs={6}>
+      {/* empty slot to keep grid balanced when needed */}
+      <div />
+    </Grid>
+  </Grid>
         <Dialog open={showModal} onClose={() => setShowModal(false)}>
           <DialogTitle>Cannot add Multiple Option</DialogTitle>
           <DialogContent>
@@ -77,12 +99,18 @@ export function SelectionPanel() {
             <Button onClick={() => setShowModal(false)}>OK</Button>
           </DialogActions>
         </Dialog>
-      </Stack>
+
 
       {/* Hierarchy */}
       <div style={{ marginTop: 12, fontWeight: 600 }}>Hierarchy</div>
       <div style={{ marginTop: 8 }}>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>Canva</div>
+        <div
+          role="button"
+          style={{ fontSize: 12, color: showCanvaProperties ? 'inherit' : 'rgba(255,255,255,0.8)', marginBottom: 6, cursor: 'pointer', padding: '4px 6px', borderRadius: 6, background: showCanvaProperties ? 'rgba(255,255,255,0.04)' : 'transparent' }}
+          onClick={() => { selectElement(null); selectGroup(null); setShowCanvaProperties(true); }}
+        >
+          Canva
+        </div>
 
         {/* Render groups */}
           {Object.values(groups).map((g) => (
@@ -124,11 +152,11 @@ export function SelectionPanel() {
           </div>
         ))}
       </div>
-      <Dialog open={!!groupToDelete} onClose={() => setGroupToDelete(null)}>
+        <Dialog open={!!groupToDelete} onClose={() => setGroupToDelete(null)}>
         <DialogTitle>Delete group</DialogTitle>
         <DialogContent>
           <Typography>
-            {groupToDelete ? `Delete group "${groups[groupToDelete]?.name || 'Group'}" and its ${elements.filter((e) => e.groupId === groupToDelete).length} child elements?` : ''}
+            {deletingGroup ? `Delete group "${deletingGroup.name || 'Group'}" and its ${elements.filter((e) => e.groupId === deletingGroup.id).length} child elements?` : ''}
           </Typography>
         </DialogContent>
         <DialogActions>

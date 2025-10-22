@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type EditorElement = {
   id: string;
-  type: "text" | "image" | "rectangle";
+  type: "text" | "image" | "rectangle" | "aiImage";
   x: number;
   y: number;
   groupId?: string;
@@ -22,6 +22,8 @@ export type EditorElement = {
   fileName?: string;
   aiText?: string;
   aiImage?: string;
+  // for `aiImage` elements — text prompt used to generate the image
+  aiImagePrompt?: string;
 };
 
 export type EditorGroup = {
@@ -49,6 +51,7 @@ type EditorState = {
   removeElement: (id: string) => void;
   addGroup: (g: Omit<EditorGroup, 'id'> & { id?: string }) => string;
   updateGroup: (id: string, updates: Partial<EditorGroup>) => void;
+  removeGroup: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
   setCanvasBackground: (src: string | null) => void;
@@ -77,7 +80,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   addElement: (el) =>
     set((s) => {
       // ensure rectangles have a text field (empty by default) and a cornerRadius default
-      const defaults: Partial<EditorElement> = el.type === 'rectangle' ? { text: el.text ?? '', cornerRadius: (el as any).cornerRadius ?? 0 } : {};
+      const rectDefaults: Partial<EditorElement> = el.type === 'rectangle' ? { text: el.text ?? '', cornerRadius: (el as any).cornerRadius ?? 0 } : {};
+      const aiImageDefaults: Partial<EditorElement> = el.type === 'aiImage' ? { text: el.text ?? '', aiImagePrompt: (el as any).aiImagePrompt ?? '' } : {};
+      const defaults: Partial<EditorElement> = { ...rectDefaults, ...aiImageDefaults };
       const newEl = { ...el, id: crypto.randomUUID(), ...defaults } as EditorElement;
       return { elements: [...s.elements, newEl], selectedId: newEl.id };
     }),
@@ -87,6 +92,13 @@ export const useEditorStore = create<EditorState>((set) => ({
     set((s) => ({ groups: { ...s.groups, [id]: group } } as any));
     return id;
   },
+  removeGroup: (id: string) =>
+    set((s) => {
+      // remove group entry and any elements that belong to it
+      const { [id]: _removed, ...rest } = s.groups;
+      const remaining = s.elements.filter((e) => e.groupId !== id);
+      return { groups: rest, elements: remaining, selectedGroupId: s.selectedGroupId === id ? null : s.selectedGroupId, selectedId: s.selectedId && s.elements.find((el) => el.id === s.selectedId && el.groupId === id) ? null : s.selectedId } as any;
+    }),
   updateGroup: (id, updates) => set((s) => ({ groups: { ...s.groups, [id]: { ...s.groups[id], ...updates } } })),
   updateElement: (id, updates) =>
     set((s) => ({

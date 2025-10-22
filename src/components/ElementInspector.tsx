@@ -186,6 +186,15 @@ export function ElementInspector() {
                   onChange={(e) => updateElement(element.id, { text: e.target.value })}
                 />
               </div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>AI text</div>
+              <div>
+                <input
+                  type="text"
+                  style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  value={element.aiText || ''}
+                  onChange={(e) => updateElement(element.id, { aiText: e.target.value })}
+                />
+              </div>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Fill</div>
               <div>
                 <input
@@ -292,6 +301,19 @@ export function ElementInspector() {
                   style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
                   value={element.aiImage || ''}
                   onChange={(e) => updateElement(element.id, { aiImage: e.target.value })}
+                />
+              </div>
+            </>
+          )}
+          {element && element.type === 'aiImage' && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>AI Image prompt</div>
+              <div>
+                <input
+                  type="text"
+                  style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  value={element.aiImagePrompt || ''}
+                  onChange={(e) => updateElement(element.id, { aiImagePrompt: e.target.value })}
                 />
               </div>
             </>

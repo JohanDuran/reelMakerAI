@@ -249,6 +249,60 @@ export function CanvasStage(props: Props) {
                 </>
               );
             }
+
+            // AI-generated image placeholder: behaves like a rectangle with a centered label
+            if (el.type === 'aiImage') {
+              const { w, h } = getElDefaults(el);
+              return (
+                <>
+                  <Group
+                    key={el.id + '-aiimg'}
+                    x={el.x}
+                    y={el.y}
+                    draggable
+                    ref={(n: any) => { if (n) nodeRefsRef.current[el.id] = n; else delete nodeRefsRef.current[el.id]; }}
+                    onClick={() => { selectElement(el.id); }}
+                    onDragEnd={(e: any) => handleDrag(el.id, e)}
+                    onTransform={() => handleTransform(el.id)}
+                    onDblClick={(e: any) => {
+                      const absPos = e.target.getAbsolutePosition();
+                      const stageRect = stageRef.current?.container().getBoundingClientRect();
+                      const containerRect = containerRef.current?.getBoundingClientRect();
+                      const left = (stageRect?.left || 0) + absPos.x - (containerRect?.left || 0);
+                      const top = (stageRect?.top || 0) + absPos.y - (containerRect?.top || 0);
+                      const width = e.target.width ? e.target.width() : (el.width || w);
+                      const height = e.target.height ? e.target.height() : (el.height || h);
+                      setEditing({ id: el.id, text: el.text || '', left, top, width, height });
+                    }}
+                  >
+                    <Rect
+                      key={el.id + '-rect'}
+                      x={0}
+                      y={0}
+                      width={el.width || w}
+                      height={el.height || h}
+                      cornerRadius={el.cornerRadius || 0}
+                      fill={el.fillColor ?? '#f8fafc'}
+                      stroke={el.id === selectedId ? '#6366f1' : undefined}
+                      strokeWidth={el.id === selectedId ? 2 : 0}
+                      dash={[6, 6]}
+                    />
+                    <Text
+                      key={el.id + '-ai-label'}
+                      text={'AI image'}
+                      x={0}
+                      y={((el.height ?? h) - (el.fontSize ?? 16)) / 2}
+                      width={el.width ?? w}
+                      fontSize={16}
+                      align={'center'}
+                      fill={'rgba(0,0,0,0.45)'}
+                      visible={!(editing && editing.id === el.id)}
+                      fontFamily={el.fontFamily || 'Arial'}
+                    />
+                  </Group>
+                </>
+              );
+            }
             
             return null;
           })}

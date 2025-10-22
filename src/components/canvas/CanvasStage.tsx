@@ -116,8 +116,7 @@ export function CanvasStage(props: Props) {
                     draggable
                     fill={el.fontColor ?? (el.id === selectedId ? 'blue' : 'black')}
                     fontFamily={el.fontFamily || 'Arial'}
-                    fontStyle={`${el.italic ? 'italic' : 'normal'}`}
-                    fontWeight={el.bold ? 'bold' : 'normal'}
+                    fontStyle={`${el.bold ? 'bold' : ''} ${el.italic ? 'italic' : ''}`.trim() || 'normal'}
                     // Konva doesn't have a direct underline prop; we'll keep underline flag on the element
                     onClick={() => { selectElement(el.id); }}
                     visible={!(editing && editing.id === el.id)}
@@ -200,8 +199,7 @@ export function CanvasStage(props: Props) {
                       fill={el.fontColor ?? 'black'}
                       visible={!(editing && editing.id === el.id)}
                       fontFamily={el.fontFamily || 'Arial'}
-                      fontStyle={`${el.italic ? 'italic' : 'normal'}`}
-                      fontWeight={el.bold ? 'bold' : 'normal'}
+                      fontStyle={`${el.bold ? 'bold' : ''} ${el.italic ? 'italic' : ''}`.trim() || 'normal'}
                     />
                     {el.underline && (
                       <Line

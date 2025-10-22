@@ -2,6 +2,8 @@ import React, { useRef } from 'react';
 import { useEditorStore } from "../store/useEditorStore";
 import CardPanel from './ui/CardPanel';
 import { readFileAsDataURL } from '../utils/readFile';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
 export function ElementInspector() {
   const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat, groups, updateGroup, selectedGroupId } = useEditorStore();
@@ -146,14 +148,21 @@ export function ElementInspector() {
 
               <div style={{ fontSize: 12, fontWeight: 600 }}>Font family</div>
               <div>
-                <select style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={element.fontFamily || 'Arial'} onChange={(e) => updateElement(element.id, { fontFamily: e.target.value })}>
-                  <option>Arial</option>
-                  <option>Roboto</option>
-                  <option>Helvetica</option>
-                  <option>Georgia</option>
-                  <option>Times New Roman</option>
-                  <option>Courier New</option>
-                </select>
+                <Select
+                  value={element.fontFamily || 'Arial'}
+                  onChange={(e) => updateElement(element.id, { fontFamily: e.target.value as string })}
+                  displayEmpty
+                  size="small"
+                  style={{ width: '100%', padding: 4, height: 36, lineHeight: '20px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  MenuProps={{ PaperProps: { style: { background: 'rgba(0,0,0,0.8)', color: 'inherit' } } }}
+                >
+                  <MenuItem value="Arial">Arial</MenuItem>
+                  <MenuItem value="Roboto">Roboto</MenuItem>
+                  <MenuItem value="Helvetica">Helvetica</MenuItem>
+                  <MenuItem value="Georgia">Georgia</MenuItem>
+                  <MenuItem value="Times New Roman">Times New Roman</MenuItem>
+                  <MenuItem value="Courier New">Courier New</MenuItem>
+                </Select>
               </div>
 
               <div style={{ fontSize: 12, fontWeight: 600 }}>Style</div>
@@ -194,6 +203,31 @@ export function ElementInspector() {
                   value={element.aiText || ''}
                   onChange={(e) => updateElement(element.id, { aiText: e.target.value })}
                 />
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Font family</div>
+              <div>
+                <Select
+                  value={element.fontFamily || 'Arial'}
+                  onChange={(e) => updateElement(element.id, { fontFamily: e.target.value as string })}
+                  displayEmpty
+                  size="small"
+                  style={{ width: '100%', padding: 4, height: 36, lineHeight: '20px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  MenuProps={{ PaperProps: { style: { background: 'rgba(0,0,0,0.8)', color: 'inherit' } } }}
+                >
+                  <MenuItem value="Arial">Arial</MenuItem>
+                  <MenuItem value="Roboto">Roboto</MenuItem>
+                  <MenuItem value="Helvetica">Helvetica</MenuItem>
+                  <MenuItem value="Georgia">Georgia</MenuItem>
+                  <MenuItem value="Times New Roman">Times New Roman</MenuItem>
+                  <MenuItem value="Courier New">Courier New</MenuItem>
+                </Select>
+              </div>
+
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Style</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button style={{ ...(toggleBase), ...(element.bold ? toggleActive : {}) }} onClick={() => updateElement(element.id, { bold: !element.bold })}>B</button>
+                <button style={{ ...(toggleBase), ...(element.italic ? toggleActive : {}) }} onClick={() => updateElement(element.id, { italic: !element.italic })}><i>I</i></button>
+                <button style={{ ...(toggleBase), ...(element.underline ? toggleActive : {}) }} onClick={() => updateElement(element.id, { underline: !element.underline })}>U</button>
               </div>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Fill</div>
               <div>

@@ -26,7 +26,7 @@ export function InlineTextEditor({ editing, elements, updateElement, setEditing 
         }}
         onBlur={() => setEditing(null)}
         onKeyDown={(e) => { if (e.key === 'Escape') setEditing(null); }}
-        style={{ width: '100%', minHeight: editing.height, resize: 'vertical', fontSize: (el?.fontSize || 24) + 'px', lineHeight: '1.1', fontFamily: 'inherit', background: 'transparent', border: '1px solid rgba(0,0,0,0.12)', padding: '2px' }}
+        style={{ width: '100%', minHeight: editing.height, resize: 'vertical', fontSize: (el?.fontSize || 24) + 'px', lineHeight: '1.1', fontFamily: el?.fontFamily || 'inherit', background: 'transparent', border: '1px solid rgba(0,0,0,0.12)', padding: '2px', fontStyle: el?.italic ? 'italic' : 'normal', fontWeight: el?.bold ? 'bold' : 'normal' }}
       />
     </div>
   );

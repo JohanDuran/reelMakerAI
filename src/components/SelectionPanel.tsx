@@ -60,7 +60,7 @@ export function SelectionPanel() {
             const optionsStartY = topY + questionH + 20;
             for (let i = 0; i < 4; i++) {
               const y = optionsStartY + i * (optionH + gap);
-              addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center' });
+              addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8 });
             }
             // Select the group so its properties (AI Topic) are shown in the inspector
             selectGroup(groupId);

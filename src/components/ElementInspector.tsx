@@ -4,7 +4,7 @@ import CardPanel from './ui/CardPanel';
 import { readFileAsDataURL } from '../utils/readFile';
 
 export function ElementInspector() {
-  const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat } = useEditorStore();
+  const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat, groups, updateGroup, selectedGroupId } = useEditorStore();
   const canvasInputRef = useRef<HTMLInputElement | null>(null);
   const element = elements.find((e) => e.id === selectedId);
 
@@ -84,7 +84,8 @@ export function ElementInspector() {
     );
   }
 
-  if (!element)
+  // If there's no selected element but a group is selected, continue so group props render.
+  if (!element && !selectedGroupId)
     return (
       <CardPanel>
         <div style={{ width: '16rem', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'rgba(255,255,255,0.7)' }}>
@@ -102,7 +103,16 @@ export function ElementInspector() {
         <h3 style={{ marginBottom: 12, fontWeight: 600 }}>Element Inspector</h3>
 
         <div style={gridStyle}>
-          {element.type === 'text' && (
+          {/* If a group is explicitly selected from the hierarchy, show group-level properties here */}
+          {selectedGroupId && groups[selectedGroupId] && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>AI Topic</div>
+              <div>
+                <input type="text" style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={groups[selectedGroupId].aiTopic || ''} onChange={(e) => updateGroup(selectedGroupId as string, { aiTopic: e.target.value })} />
+              </div>
+            </>
+          )}
+          {element && element.type === 'text' && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Text</div>
               <div>
@@ -165,7 +175,7 @@ export function ElementInspector() {
             </>
           )}
 
-          {element.type === 'rectangle' && (
+          {element && element.type === 'rectangle' && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Text</div>
               <div>
@@ -196,6 +206,17 @@ export function ElementInspector() {
                 />
               </div>
 
+              <div style={{ fontSize: 12, fontWeight: 600 }}>Corner radius</div>
+              <div>
+                <input
+                  type="number"
+                  min={0}
+                  style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+                  value={element.cornerRadius || 0}
+                  onChange={(e) => updateElement(element.id, { cornerRadius: Math.max(0, parseInt(e.target.value || '0')) })}
+                />
+              </div>
+
               <div style={{ fontSize: 12, fontWeight: 600 }}>Color</div>
               <div>
                 <input
@@ -217,7 +238,7 @@ export function ElementInspector() {
 
           {/* X and Y are stored in state but intentionally hidden from the inspector UI */}
 
-          {element.type === 'image' && (
+          {element && element.type === 'image' && (
             <>
               <div style={{ fontSize: 12, fontWeight: 600 }}>Image</div>
               <div>

@@ -5,7 +5,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 
 export function SelectionPanel() {
-  const { addElement } = useEditorStore();
+  const { addElement, elements, removeElement, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId } = useEditorStore();
 
   return (
     <CardPanel>
@@ -15,11 +15,76 @@ export function SelectionPanel() {
         <Button variant="outlined" onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Add Text</Button>
         <Button variant="outlined" onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Add Rectangle</Button>
         <Button variant="outlined" onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Add Image</Button>
+        <Button
+          variant="outlined"
+          onClick={() => {
+            // Clear existing elements
+            const ids = elements.map((e) => e.id);
+            ids.forEach((id) => removeElement(id));
+
+            // Create a group for this multiple option question
+            const groupId = useEditorStore.getState().addGroup({ name: 'Multiple Option', aiTopic: '' });
+
+            // Layout: center rectangles based on canvasWidth
+            const cw = canvasWidth || 450;
+            const padding = 24;
+            const rectW = Math.max(200, Math.round(cw - padding * 2));
+
+            const questionH = 120;
+            const optionH = 72;
+            const gap = 12;
+
+            const startX = Math.round((cw - rectW) / 2);
+            const topY = 80;
+
+            // Add question rectangle at top (belongs to group)
+            addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center' });
+
+            // Add 4 option rectangles below (belong to group)
+            const optionsStartY = topY + questionH + 20;
+            for (let i = 0; i < 4; i++) {
+              const y = optionsStartY + i * (optionH + gap);
+              addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center' });
+            }
+            // Select the group so its properties (AI Topic) are shown in the inspector
+            selectGroup(groupId);
+          }}
+        >
+          Multiple Option
+        </Button>
       </Stack>
 
-      {/* Canvas button removed — ESC or clicking outside canvas will open canvas properties */}
+      {/* Hierarchy */}
+      <div style={{ marginTop: 12, fontWeight: 600 }}>Hierarchy</div>
+      <div style={{ marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 6 }}>Canva</div>
 
-      {/* Recent section removed as requested */}
+        {/* Render groups */}
+        {Object.values(groups).map((g) => (
+          <div key={g.id} style={{ marginBottom: 6 }}>
+            <div
+              style={{ padding: '6px 8px', borderRadius: 6, background: selectedGroupId === g.id ? 'rgba(255,255,255,0.06)' : 'transparent', cursor: 'pointer' }}
+              onClick={() => selectGroup(g.id)}
+            >
+              <u>{g.name || 'Group'}</u>
+            </div>
+            <div style={{ marginLeft: 8, marginTop: 6 }}>
+              {elements.filter((e) => e.groupId === g.id).map((el) => (
+                <div key={el.id} style={{ padding: '4px 6px', borderRadius: 4, background: selectedId === el.id ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: 'pointer' }} onClick={() => selectElement(el.id)}>
+                  {el.type === 'rectangle' ? (el.text || 'Rectangle') : (el.type === 'text' ? (el.text || 'Text') : (el.fileName || 'Image'))}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {/* Render ungrouped elements */}
+        {elements.filter((e) => !e.groupId).map((el) => (
+          <div key={el.id} style={{ padding: '6px 8px', borderRadius: 6, background: selectedId === el.id ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: 'pointer', marginBottom: 6 }} onClick={() => selectElement(el.id)}>
+            {el.type === 'rectangle' ? (el.text || 'Rectangle') : (el.type === 'text' ? (el.text || 'Text') : (el.fileName || 'Image'))}
+          </div>
+        ))}
+      </div>
     </CardPanel>
   );
 }

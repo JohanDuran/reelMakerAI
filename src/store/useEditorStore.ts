@@ -5,8 +5,10 @@ export type EditorElement = {
   type: "text" | "image" | "rectangle";
   x: number;
   y: number;
+  groupId?: string;
   width?: number;
   height?: number;
+  cornerRadius?: number;
   fontSize?: number;
   fontColor?: string;
   fontFamily?: string;
@@ -22,9 +24,16 @@ export type EditorElement = {
   aiImage?: string;
 };
 
+export type EditorGroup = {
+  id: string;
+  name?: string;
+  aiTopic?: string;
+};
+
 type EditorState = {
   elements: EditorElement[];
   selectedId: string | null;
+  selectedGroupId?: string | null;
   // canvas dimensions (in px)
   canvasWidth: number;
   canvasHeight: number;
@@ -34,9 +43,12 @@ type EditorState = {
   canvasBackgroundRepeat?: boolean;
   canvasMeta?: string; // arbitrary text to send to backend
   showCanvaProperties: boolean;
+  groups: Record<string, EditorGroup>;
   addElement: (el: Omit<EditorElement, "id">) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   removeElement: (id: string) => void;
+  addGroup: (g: Omit<EditorGroup, 'id'> & { id?: string }) => string;
+  updateGroup: (id: string, updates: Partial<EditorGroup>) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
   setCanvasBackground: (src: string | null) => void;
@@ -44,6 +56,7 @@ type EditorState = {
   setCanvasBackgroundRepeat: (v: boolean) => void;
   setCanvasMeta: (text: string) => void;
   setShowCanvaProperties: (v: boolean) => void;
+  selectGroup: (id: string | null) => void;
   selectElement: (id: string | null) => void;
   setAspectRatio: (ratio: "9:16" | "16:9") => void;
 };
@@ -51,6 +64,7 @@ type EditorState = {
 export const useEditorStore = create<EditorState>((set) => ({
   elements: [],
   selectedId: null,
+  selectedGroupId: null,
   // default to 9:16 (portrait) as the new default aspect ratio (450x800)
   canvasWidth: 450,
   canvasHeight: 800,
@@ -59,12 +73,21 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasBackgroundRepeat: false,
   canvasMeta: '',
   showCanvaProperties: false,
+  groups: {},
   addElement: (el) =>
     set((s) => {
-      // ensure rectangles have a text field (empty by default)
-      const newEl = { ...el, id: crypto.randomUUID(), ...(el.type === 'rectangle' ? { text: el.text ?? '' } : {}) };
+      // ensure rectangles have a text field (empty by default) and a cornerRadius default
+      const defaults: Partial<EditorElement> = el.type === 'rectangle' ? { text: el.text ?? '', cornerRadius: (el as any).cornerRadius ?? 0 } : {};
+      const newEl = { ...el, id: crypto.randomUUID(), ...defaults } as EditorElement;
       return { elements: [...s.elements, newEl], selectedId: newEl.id };
     }),
+  addGroup: (g) => {
+    const id = g.id ?? crypto.randomUUID();
+    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic };
+    set((s) => ({ groups: { ...s.groups, [id]: group } } as any));
+    return id;
+  },
+  updateGroup: (id, updates) => set((s) => ({ groups: { ...s.groups, [id]: { ...s.groups[id], ...updates } } })),
   updateElement: (id, updates) =>
     set((s) => ({
       elements: s.elements.map((e) =>
@@ -100,7 +123,9 @@ export const useEditorStore = create<EditorState>((set) => ({
       return { elements: arr } as any;
     }),
   // When selecting an element, show element properties (hide canvas-level properties)
-  selectElement: (id) => set(() => ({ selectedId: id, showCanvaProperties: false })),
+  selectElement: (id) => set(() => ({ selectedId: id, selectedGroupId: null, showCanvaProperties: false })),
+  // Select a group to show group-level properties (hide element and canvas properties)
+  selectGroup: (id) => set(() => ({ selectedGroupId: id, selectedId: null, showCanvaProperties: false })),
   setCanvasBackground: (src) => set(() => ({ canvasBackground: src })),
   setCanvasBackgroundFile: (f) => set(() => ({ canvasBackgroundFile: f })),
   setCanvasBackgroundRepeat: (v) => set(() => ({ canvasBackgroundRepeat: v })),

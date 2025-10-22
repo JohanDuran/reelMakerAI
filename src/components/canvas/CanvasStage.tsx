@@ -182,6 +182,7 @@ export function CanvasStage(props: Props) {
                       y={0}
                       width={el.width || w}
                       height={el.height || h}
+                      cornerRadius={el.cornerRadius || 0}
                       fill={el.fillColor ?? (el.id === selectedId ? '#e2e8f0' : '#c7d2fe')}
                       stroke={el.id === selectedId ? '#6366f1' : undefined}
                       strokeWidth={el.id === selectedId ? 2 : 0}

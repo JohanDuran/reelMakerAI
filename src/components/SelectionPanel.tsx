@@ -24,9 +24,9 @@ export function SelectionPanel() {
 
   return (
     <CardPanel>
-      {/* Header row: Add title on the left, Export/Import on the right */}
+      {/* Header row: Elements title on the left, Export/Import on the right */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontWeight: 600 }}>Add</div>
+        <div style={{ fontWeight: 600 }}>Elements</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Button size="small" variant="contained" color="primary" onClick={() => {
             try {
@@ -69,74 +69,81 @@ export function SelectionPanel() {
         </div>
       </div>
 
-  <Grid container spacing={1} sx={{ marginBottom: 2 }}>
-    <Grid item xs={6}>
-      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Text</Button>
+  <div style={{ marginBottom: 8 }}>
+    <div style={{ marginBottom: 6, fontWeight: 500 }}>Elements</div>
+    <Grid container spacing={1} sx={{ marginBottom: 2 }}>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'text', x: 100, y: 100, text: 'Text', fontSize: 24 })}>Text</Button>
+      </Grid>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Rectangle</Button>
+      </Grid>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Image</Button>
+      </Grid>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'aiImage', x: 120, y: 120, width: 240, height: 160, text: '', aiImagePrompt: '' })}>AI Image</Button>
+      </Grid>
     </Grid>
-    <Grid item xs={6}>
-      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'rectangle', x: 120, y: 120, width: 160, height: 120, text: 'Label', fontSize: 16, fontColor: '#000000', fillColor: '#c7d2fe', align: 'center' })}>Rectangle</Button>
+
+    <div style={{ marginBottom: 6, fontWeight: 500 }}>Templates</div>
+    <Grid container spacing={1} sx={{ marginBottom: 2 }}>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={() => {
+              // if there's already a Multiple Option group, show error modal
+              const hasMultiple = Object.values(groups).some((g) => g.name === 'Multiple Option');
+              if (hasMultiple) {
+                setShowModal(true);
+                return;
+              }
+
+              // Clear existing elements
+              const ids = elements.map((e) => e.id);
+              ids.forEach((id) => removeElement(id));
+
+              // Create a group for this multiple option question with TTS defaults
+              const groupId = useEditorStore.getState().addGroup({
+                name: 'Multiple Option',
+                aiTopic: '',
+                // default TTS mode and durations
+                ttsMode: 'None',
+                clipDuration: 10,
+                ttsQuestionDuration: false,
+                answerDuration: 3,
+                ttsAnswerDuration: false,
+              });
+
+              // Layout: center rectangles based on canvasWidth
+              const cw = canvasWidth || 450;
+              const padding = 24;
+              const rectW = Math.max(200, Math.round(cw - padding * 2));
+
+              const questionH = 120;
+              const optionH = 72;
+              const gap = 12;
+
+              const startX = Math.round((cw - rectW) / 2);
+              const topY = 80;
+
+              // Add question rectangle at top (belongs to group)
+              addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center' });
+
+              // Add 4 option rectangles below (belong to group)
+              const optionsStartY = topY + questionH + 20;
+              for (let i = 0; i < 4; i++) {
+                const y = optionsStartY + i * (optionH + gap);
+                addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8 });
+              }
+              // Select the group so its properties (AI Topic) are shown in the inspector
+              selectGroup(groupId);
+        }}>Multiple Option</Button>
+      </Grid>
+      <Grid item xs={6}>
+        {/* empty slot to keep grid balanced when needed */}
+        <div />
+      </Grid>
     </Grid>
-    <Grid item xs={6}>
-      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'image', x: 120, y: 120, width: 160, height: 120 })}>Image</Button>
-    </Grid>
-    <Grid item xs={6}>
-      <Button fullWidth variant="outlined" onClick={() => addElement({ type: 'aiImage', x: 120, y: 120, width: 240, height: 160, text: '', aiImagePrompt: '' })}>AI Image</Button>
-    </Grid>
-    <Grid item xs={6}>
-      <Button fullWidth variant="outlined" onClick={() => {
-            // if there's already a Multiple Option group, show error modal
-            const hasMultiple = Object.values(groups).some((g) => g.name === 'Multiple Option');
-            if (hasMultiple) {
-              setShowModal(true);
-              return;
-            }
-
-            // Clear existing elements
-            const ids = elements.map((e) => e.id);
-            ids.forEach((id) => removeElement(id));
-
-            // Create a group for this multiple option question with TTS defaults
-            const groupId = useEditorStore.getState().addGroup({
-              name: 'Multiple Option',
-              aiTopic: '',
-              // default TTS mode and durations
-              ttsMode: 'question_and_answer',
-              clipDuration: 10,
-              ttsQuestionDuration: false,
-              answerDuration: 3,
-              ttsAnswerDuration: false,
-            });
-
-            // Layout: center rectangles based on canvasWidth
-            const cw = canvasWidth || 450;
-            const padding = 24;
-            const rectW = Math.max(200, Math.round(cw - padding * 2));
-
-            const questionH = 120;
-            const optionH = 72;
-            const gap = 12;
-
-            const startX = Math.round((cw - rectW) / 2);
-            const topY = 80;
-
-            // Add question rectangle at top (belongs to group)
-            addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center' });
-
-            // Add 4 option rectangles below (belong to group)
-            const optionsStartY = topY + questionH + 20;
-            for (let i = 0; i < 4; i++) {
-              const y = optionsStartY + i * (optionH + gap);
-              addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8 });
-            }
-            // Select the group so its properties (AI Topic) are shown in the inspector
-            selectGroup(groupId);
-      }}>Multiple Option</Button>
-    </Grid>
-    <Grid item xs={6}>
-      {/* empty slot to keep grid balanced when needed */}
-      <div />
-    </Grid>
-  </Grid>
+  </div>
         <Dialog open={showModal} onClose={() => setShowModal(false)}>
           <DialogTitle>Cannot add Multiple Option</DialogTitle>
           <DialogContent>

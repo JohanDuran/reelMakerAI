@@ -62,6 +62,24 @@ export function ElementInspector() {
             </div>
           </div>
 
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600 }}>TTS Model</div>
+            <Select
+              value={useEditorStore.getState().canvasTtsModel || ''}
+              onChange={(e) => useEditorStore.getState().setCanvasTtsModel(e.target.value as string || undefined)}
+              displayEmpty
+              size="small"
+              style={{ width: '100%', padding: 4, height: 36, lineHeight: '20px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
+              MenuProps={{ PaperProps: { style: { background: 'rgba(0,0,0,0.8)', color: 'inherit' } } }}
+            >
+              <MenuItem value="">(none)</MenuItem>
+              <MenuItem value="tts-alpha-1">TTS Alpha</MenuItem>
+              <MenuItem value="tts-beta-voice">Beta Voice</MenuItem>
+              <MenuItem value="tts-ocean">Ocean Model</MenuItem>
+              <MenuItem value="tts-clarity-x">Clarity X</MenuItem>
+            </Select>
+          </div>
+
           {/* if an image element is selected, allow using it as canvas background */}
           {selId && (() => {
             const selEl = elements.find((x) => x.id === selId);
@@ -117,13 +135,14 @@ export function ElementInspector() {
               <div style={{ fontSize: 12, fontWeight: 600 }}>TTS</div>
               <div>
                 <Select
-                  value={sg.ttsMode || 'question_and_answer'}
+                  value={sg.ttsMode || 'None'}
                   onChange={(e) => updateGroup(selectedGroupId as string, { ttsMode: e.target.value as any })}
                   displayEmpty
                   size="small"
                   style={{ width: '100%', padding: 4, height: 36, lineHeight: '20px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', color: 'inherit', border: '1px solid rgba(255,255,255,0.06)' }}
                   MenuProps={{ PaperProps: { style: { background: 'rgba(0,0,0,0.8)', color: 'inherit' } } }}
                 >
+                  <MenuItem value="None">None</MenuItem>
                   <MenuItem value="question_and_answer">Question and correct answer only</MenuItem>
                   <MenuItem value="question_only">Question only</MenuItem>
                   <MenuItem value="question_options_and_answer">Question/options and correct answer</MenuItem>
@@ -132,20 +151,12 @@ export function ElementInspector() {
               </div>
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Question duration (s)</div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.clipDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { clipDuration: parseFloat(e.target.value || '0') })} disabled={!!sg.ttsQuestionDuration} />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={!!sg.ttsQuestionDuration} onChange={(e) => updateGroup(selectedGroupId as string, { ttsQuestionDuration: e.target.checked })} />
-                    <span style={{ fontSize: 12 }}>TTS based</span>
-                  </label>
+                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.clipDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { clipDuration: parseFloat(e.target.value || '0') })} disabled={sg.ttsMode !== 'None'} />
                 </div>
 
                 <div style={{ fontSize: 12, fontWeight: 600 }}>Answer duration (s)</div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.answerDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { answerDuration: parseFloat(e.target.value || '0') })} disabled={!!sg.ttsAnswerDuration} />
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={!!sg.ttsAnswerDuration} onChange={(e) => updateGroup(selectedGroupId as string, { ttsAnswerDuration: e.target.checked })} />
-                    <span style={{ fontSize: 12 }}>TTS based</span>
-                  </label>
+                  <input type="number" min={0} style={{ width: '100%', padding: '8px', borderRadius: 6 }} value={sg.answerDuration ?? 0} onChange={(e) => updateGroup(selectedGroupId as string, { answerDuration: parseFloat(e.target.value || '0') })} disabled={sg.ttsMode !== 'None'} />
                 </div>
               </>
             );

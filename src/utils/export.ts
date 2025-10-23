@@ -30,6 +30,7 @@ export type ExportCanvas = {
   backgroundSrc?: string;
   backgroundRepeat?: boolean;
   canvasMeta?: string;
+  canvasTtsModel?: string;
   elements: ExportElement[];
 };
 
@@ -118,12 +119,13 @@ export function serializeProject(): ExportProject {
     canvases: [
       {
         id: 'canvas_' + crypto.randomUUID(),
-        width: s.canvasWidth,
-        height: s.canvasHeight,
-        // store background src inline (could be data URL or remote URL)
-        backgroundSrc: bgSrc ?? undefined,
-        backgroundRepeat: !!s.canvasBackgroundRepeat,
-        canvasMeta: s.canvasMeta || undefined,
+  width: s.canvasWidth,
+  height: s.canvasHeight,
+  // store background src inline (could be data URL or remote URL)
+  backgroundSrc: bgSrc ?? undefined,
+  backgroundRepeat: !!s.canvasBackgroundRepeat,
+  canvasMeta: s.canvasMeta || undefined,
+  canvasTtsModel: s.canvasTtsModel || undefined,
         elements: [
           // first, export groups as elements of type 'group' with children
           ...Object.values(s.groups || {}).map((g) => ({

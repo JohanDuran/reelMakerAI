@@ -33,7 +33,7 @@ export type EditorGroup = {
   name?: string;
   aiTopic?: string;
   // TTS and timing fields for Multiple Option template
-  ttsMode?: 'question_and_answer' | 'question_only' | 'question_options_and_answer' | 'question_and_correct_answer_only';
+  ttsMode?: 'None' | 'question_and_answer' | 'question_only' | 'question_options_and_answer' | 'question_and_correct_answer_only';
   clipDuration?: number; // seconds
   ttsQuestionDuration?: boolean;
   answerDuration?: number; // seconds
@@ -52,6 +52,7 @@ type EditorState = {
   canvasBackgroundFile?: File | null; // original File object for uploaded background (cleared on remove)
   canvasBackgroundRepeat?: boolean;
   canvasMeta?: string; // arbitrary text to send to backend
+  canvasTtsModel?: string; // selected TTS model for the canvas
   showCanvaProperties: boolean;
   groups: Record<string, EditorGroup>;
   addElement: (el: Omit<EditorElement, "id">) => void;
@@ -67,6 +68,7 @@ type EditorState = {
   setCanvasBackground: (src: string | null) => void;
   setCanvasBackgroundFile: (f: File | null) => void;
   setCanvasBackgroundRepeat: (v: boolean) => void;
+  setCanvasTtsModel: (m: string | undefined) => void;
   setCanvasMeta: (text: string) => void;
   setShowCanvaProperties: (v: boolean) => void;
   selectGroup: (id: string | null) => void;
@@ -85,6 +87,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasBackgroundFile: null,
   canvasBackgroundRepeat: false,
   canvasMeta: '',
+  canvasTtsModel: undefined,
   showCanvaProperties: false,
   groups: {},
   addElement: (el) =>
@@ -162,6 +165,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   setCanvasBackground: (src) => set(() => ({ canvasBackground: src })),
   setCanvasBackgroundFile: (f) => set(() => ({ canvasBackgroundFile: f })),
   setCanvasBackgroundRepeat: (v) => set(() => ({ canvasBackgroundRepeat: v })),
+  setCanvasTtsModel: (m) => set(() => ({ canvasTtsModel: m })),
   setCanvasMeta: (text) => set(() => ({ canvasMeta: text })),
   setShowCanvaProperties: (v: boolean) => set({ showCanvaProperties: v }),
   setAspectRatio: (ratio) =>

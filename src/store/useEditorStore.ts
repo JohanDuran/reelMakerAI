@@ -24,6 +24,8 @@ export type EditorElement = {
   aiImage?: string;
   // for `aiImage` elements — text prompt used to generate the image
   aiImagePrompt?: string;
+  // stacking order (0 = bottom). Managed by the store; serialized on export.
+  zIndex?: number;
 };
 
 export type EditorGroup = {
@@ -60,6 +62,8 @@ type EditorState = {
   removeGroup: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
+  // ensure sequential zIndex values (0..n-1) matching array order
+  normalizeZIndices: () => void;
   setCanvasBackground: (src: string | null) => void;
   setCanvasBackgroundFile: (f: File | null) => void;
   setCanvasBackgroundRepeat: (v: boolean) => void;
@@ -89,8 +93,10 @@ export const useEditorStore = create<EditorState>((set) => ({
       const rectDefaults: Partial<EditorElement> = el.type === 'rectangle' ? { text: el.text ?? '', cornerRadius: (el as any).cornerRadius ?? 0 } : {};
       const aiImageDefaults: Partial<EditorElement> = el.type === 'aiImage' ? { text: el.text ?? '', aiImagePrompt: (el as any).aiImagePrompt ?? '' } : {};
       const defaults: Partial<EditorElement> = { ...rectDefaults, ...aiImageDefaults };
-      const newEl = { ...el, id: crypto.randomUUID(), ...defaults } as EditorElement;
-      return { elements: [...s.elements, newEl], selectedId: newEl.id };
+      // compute zIndex: place new element on top (max existing zIndex + 1)
+      const maxZ = s.elements.length ? Math.max(...s.elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
+      const newEl = { ...el, id: crypto.randomUUID(), ...defaults, zIndex: maxZ + 1 } as EditorElement;
+      return { elements: [...s.elements, newEl], selectedId: newEl.id } as any;
     }),
   addGroup: (g) => {
     const id = g.id ?? crypto.randomUUID();
@@ -126,7 +132,9 @@ export const useEditorStore = create<EditorState>((set) => ({
       const tmp = arr[idx + 1];
       arr[idx + 1] = arr[idx];
       arr[idx] = tmp;
-      return { elements: arr } as any;
+      // after swapping array order, reassign zIndex sequentially to match order
+      const normalized = arr.map((el, i) => ({ ...el, zIndex: i }));
+      return { elements: normalized } as any;
     }),
   // move the element one step backward in the stacking order (towards start of array)
   sendBackward: (id: string) =>
@@ -138,7 +146,14 @@ export const useEditorStore = create<EditorState>((set) => ({
       arr[idx - 1] = arr[idx];
       arr[idx] = tmp;
       // if we moved the selected element backward, selection remains
-      return { elements: arr } as any;
+      const normalized = arr.map((el, i) => ({ ...el, zIndex: i }));
+      return { elements: normalized } as any;
+    }),
+  normalizeZIndices: () =>
+    set((s) => {
+      const arr = s.elements.slice().sort((a, b) => (typeof a.zIndex === 'number' ? a.zIndex : 0) - (typeof b.zIndex === 'number' ? b.zIndex : 0));
+      const normalized = arr.map((el, i) => ({ ...el, zIndex: i }));
+      return { elements: normalized } as any;
     }),
   // When selecting an element, show element properties (hide canvas-level properties)
   selectElement: (id) => set(() => ({ selectedId: id, selectedGroupId: null, showCanvaProperties: false })),

@@ -9,6 +9,7 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
+import { serializeProject } from '../utils/export';
 
 export function SelectionPanel() {
   const { addElement, elements, removeElement, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId, showCanvaProperties, setShowCanvaProperties } = useEditorStore();
@@ -21,6 +22,27 @@ export function SelectionPanel() {
   return (
     <CardPanel>
       <div style={{ fontWeight: 600, marginBottom: 8 }}>Add</div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <Button size="small" variant="outlined" onClick={() => {
+          try {
+            const json = serializeProject();
+            const str = JSON.stringify(json, null, 2);
+            const blob = new Blob([str], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reel-export-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.reel.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            console.error('Export failed', err);
+            alert('Export failed: ' + String(err));
+          }
+        }}>Export</Button>
+      </div>
 
   <Grid container spacing={1} sx={{ marginBottom: 2 }}>
     <Grid item xs={6}>

@@ -61,13 +61,15 @@ export function CanvasStage(props: Props) {
     return newBox;
   };
 
-  const URLImage = ({ src, ...rest }: any) => {
+  // Forward refs so parent can attach Konva transformer to the image node
+  const URLImage = React.forwardRef(({ src, ...rest }: any, ref: any) => {
     // useImage handles loading the image and returns the DOM Image object
     const [image] = useImage(src, 'anonymous');
 
-    // Pass the loaded DOM Image object to the KonvaImage component
-    return <KonvaImage image={image} {...rest} />;
-  };
+    // Pass the loaded DOM Image object to the KonvaImage component and forward the ref
+    return <KonvaImage image={image} ref={ref} {...rest} />;
+  });
+  URLImage.displayName = 'URLImage';
   // images will use the element's `src` field (data URL or remote URL)
 
   return (

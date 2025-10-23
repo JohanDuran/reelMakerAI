@@ -1,7 +1,7 @@
 // automatic JSX runtime used; no default React import required
 import CardPanel from './ui/CardPanel';
 import { useEditorStore } from '../store/useEditorStore';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import Dialog from '@mui/material/Dialog';
@@ -9,39 +9,64 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
-import { serializeProject } from '../utils/export';
+import { serializeProject, deserializeProject } from '../utils/export';
 
 export function SelectionPanel() {
   const { addElement, elements, removeElement, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId, showCanvaProperties, setShowCanvaProperties } = useEditorStore();
   const [showModal, setShowModal] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<{ canvases?: any[]; elementsCount?: number; groupsCount?: number; raw?: any } | null>(null);
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // safe reference to the group being deleted (avoids indexing with null)
   const deletingGroup = groupToDelete ? groups[groupToDelete] : null;
 
   return (
     <CardPanel>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>Add</div>
+      {/* Header row: Add title on the left, Export/Import on the right */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontWeight: 600 }}>Add</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" variant="contained" color="primary" onClick={() => {
+            try {
+              const json = serializeProject();
+              const str = JSON.stringify(json, null, 2);
+              const blob = new Blob([str], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `reel-export-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.reel.json`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+            } catch (err) {
+              console.error('Export failed', err);
+              alert('Export failed: ' + String(err));
+            }
+          }}>Export</Button>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-        <Button size="small" variant="outlined" onClick={() => {
-          try {
-            const json = serializeProject();
-            const str = JSON.stringify(json, null, 2);
-            const blob = new Blob([str], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `reel-export-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.reel.json`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
-          } catch (err) {
-            console.error('Export failed', err);
-            alert('Export failed: ' + String(err));
-          }
-        }}>Export</Button>
+          <input style={{ display: 'none' }} type="file" accept="application/json" ref={(ref) => { fileInputRef.current = ref; }} onChange={async (ev) => {
+            const f = ev.target.files?.[0];
+            if (!f) return;
+            try {
+              const text = await f.text();
+              const obj = JSON.parse(text);
+              // Basic preview: count canvases/elements/groups
+              const canvases = (obj && obj.canvases) ? obj.canvases : (obj.canvas ? [{ ...obj, elements: obj.elements || [] }] : []);
+              const elementsCount = canvases.reduce((acc: number, c: any) => acc + ((c.elements && c.elements.length) || 0), 0);
+              const groupsCount = canvases.reduce((acc: number, c: any) => acc + (c.elements ? c.elements.filter((e: any) => e.type === 'group').length : 0), 0);
+              setImportPreview({ canvases, elementsCount, groupsCount, raw: obj });
+              setShowImportConfirm(true);
+            } catch (err) {
+              console.error('Import parse failed', err);
+              alert('Import failed: ' + String(err));
+            }
+          }} />
+
+          <Button size="small" variant="outlined" color="secondary" onClick={() => fileInputRef.current && fileInputRef.current.click()}>Import</Button>
+        </div>
       </div>
 
   <Grid container spacing={1} sx={{ marginBottom: 2 }}>
@@ -187,6 +212,34 @@ export function SelectionPanel() {
             if (groupToDelete) useEditorStore.getState().removeGroup(groupToDelete);
             setGroupToDelete(null);
           }} color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={showImportConfirm} onClose={() => { setShowImportConfirm(false); setImportPreview(null); }}>
+        <DialogTitle>Import project</DialogTitle>
+        <DialogContent>
+          <Typography>You're about to import a project. This will replace the current canvas contents.</Typography>
+          {importPreview ? (
+            <div style={{ marginTop: 8 }}>
+              <Typography>Canvases: {importPreview.canvases?.length ?? 0}</Typography>
+              <Typography>Elements: {importPreview.elementsCount ?? 0}</Typography>
+              <Typography>Groups: {importPreview.groupsCount ?? 0}</Typography>
+            </div>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setShowImportConfirm(false); setImportPreview(null); }}>Cancel</Button>
+          <Button onClick={async () => {
+            try {
+              if (!importPreview) throw new Error('No import data');
+              await deserializeProject(importPreview.raw);
+              setShowImportConfirm(false);
+              setImportPreview(null);
+            } catch (err) {
+              console.error('Import failed', err);
+              alert('Import failed: ' + String(err));
+            }
+          }}>Import</Button>
         </DialogActions>
       </Dialog>
     </CardPanel>

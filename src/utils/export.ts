@@ -72,6 +72,8 @@ export function serializeProject(): ExportProject {
         width: el.width,
         height: el.height,
         zIndex: z >= 0 ? z : undefined,
+        // include semantic subtype if present
+        subtype: (el as any).subtype ?? undefined,
       } as Record<string, any>,
     };
 
@@ -128,6 +130,8 @@ export function serializeProject(): ExportProject {
           width: el.width,
           height: el.height,
           zIndex: z >= 0 ? z : undefined,
+          // include semantic subtype if present
+          subtype: (el as any).subtype ?? undefined,
         } as Record<string, any>,
       };
       if (el.type === 'text' || el.type === 'rectangle') {
@@ -278,6 +282,8 @@ export async function deserializeProject(obj: unknown): Promise<void> {
         y: props.y,
         width: props.width,
         height: props.height,
+        // restore optional subtype if present
+        subtype: props.subtype,
       };
       if (el.type === 'text' || el.type === 'rectangle') {
         Object.assign(common, {

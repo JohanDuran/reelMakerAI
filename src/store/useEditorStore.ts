@@ -5,6 +5,8 @@ export type EditorElement = {
   type: "text" | "image" | "rectangle" | "aiImage";
   x: number;
   y: number;
+  // optional semantic subtype used for templates/groups (e.g. 'question' | 'option')
+  subtype?: string;
   groupId?: string;
   width?: number;
   height?: number;
@@ -38,6 +40,8 @@ export type EditorGroup = {
   ttsQuestionDuration?: boolean;
   answerDuration?: number; // seconds
   ttsAnswerDuration?: boolean;
+  // initial zIndex assigned to elements created for this group (set when group is created)
+  initialZ?: number;
 };
 
 export type EditorCanvas = {
@@ -120,15 +124,30 @@ export const useEditorStore = create<EditorState>((set) => {
       const rectDefaults: Partial<EditorElement> = el.type === 'rectangle' ? { text: el.text ?? '', cornerRadius: (el as any).cornerRadius ?? 0 } : {};
       const aiImageDefaults: Partial<EditorElement> = el.type === 'aiImage' ? { text: el.text ?? '', aiImagePrompt: (el as any).aiImagePrompt ?? '' } : {};
       const defaults: Partial<EditorElement> = { ...rectDefaults, ...aiImageDefaults };
-      // compute zIndex: place new element on top (max existing zIndex + 1)
+      // compute zIndex: if caller provided a zIndex use it (useful for templates), otherwise place new element on top (max existing zIndex + 1)
       const maxZ = s.elements.length ? Math.max(...s.elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
-      const newEl = { ...el, id: crypto.randomUUID(), ...defaults, zIndex: maxZ + 1 } as EditorElement;
+  const providedZ = (el as any).zIndex;
+  // If element belongs to a group, and the group has an initialZ, prefer that when caller
+  // didn't explicitly provide a zIndex. This ensures elements created for a group share
+  // the same initial zIndex.
+  const groupId = (el as any).groupId;
+  const groupInitialZ = groupId && s.groups && s.groups[groupId] ? s.groups[groupId]?.initialZ : undefined;
+  const zIndexToUse = typeof providedZ === 'number' ? providedZ : (typeof groupInitialZ === 'number' ? groupInitialZ : (maxZ + 1));
+      const elWithoutZ = { ...el } as any;
+      // ensure we don't carry an id from caller
+      delete elWithoutZ.id;
+      const newEl = { ...elWithoutZ, id: crypto.randomUUID(), ...defaults, zIndex: zIndexToUse } as EditorElement;
       return { elements: [...s.elements, newEl], selectedId: newEl.id } as any;
     }),
   addGroup: (g) => {
     const id = g.id ?? crypto.randomUUID();
-    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic, ttsMode: (g as any).ttsMode ?? 'None', clipDuration: (g as any).clipDuration, ttsQuestionDuration: (g as any).ttsQuestionDuration, answerDuration: (g as any).answerDuration, ttsAnswerDuration: (g as any).ttsAnswerDuration };
-    set((s) => ({ groups: { ...s.groups, [id]: group } } as any));
+    // compute base z from current elements so group-created elements can share this zIndex
+    set((s) => {
+      const maxZ = s.elements && s.elements.length ? Math.max(...s.elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
+      const baseZ = maxZ + 1;
+      const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic, ttsMode: (g as any).ttsMode ?? 'None', clipDuration: (g as any).clipDuration, ttsQuestionDuration: (g as any).ttsQuestionDuration, answerDuration: (g as any).answerDuration, ttsAnswerDuration: (g as any).ttsAnswerDuration, initialZ: baseZ };
+      return { groups: { ...s.groups, [id]: group } } as any;
+    });
     return id;
   },
   // create a new empty canvas and switch to it
@@ -206,10 +225,19 @@ export const useEditorStore = create<EditorState>((set) => {
       ),
     })),
   removeElement: (id) =>
-    set((s) => ({
-      elements: s.elements.filter((e) => e.id !== id),
-      selectedId: s.selectedId === id ? null : s.selectedId,
-    })),
+    set((s) => {
+      // Prevent deleting individual elements that belong to a group.
+      const el = s.elements.find((e) => e.id === id);
+      if (!el) return {} as any;
+      if (el.groupId) {
+        // No-op: grouped elements must be deleted by deleting the group.
+        return {} as any;
+      }
+      return {
+        elements: s.elements.filter((e) => e.id !== id),
+        selectedId: s.selectedId === id ? null : s.selectedId,
+      } as any;
+    }),
   // move the element one step forward in the stacking order (towards end of array)
   bringForward: (id: string) =>
     set((s) => {

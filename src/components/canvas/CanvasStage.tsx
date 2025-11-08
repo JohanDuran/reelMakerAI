@@ -364,18 +364,7 @@ export function CanvasStage(props: Props) {
               Upload
             </label>
 
-            {/* delete button top-right inside the overlay */}
-            <button
-              onClick={(ev) => {
-                ev.stopPropagation();
-                const state = useEditorStore.getState();
-                state.removeElement(el.id);
-              }}
-              title="Delete element"
-              style={{ position: 'absolute', right: 6, top: 6, zIndex: 10, background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 4, padding: '4px 6px', cursor: 'pointer' }}
-            >
-              ×
-            </button>
+            {/* delete button removed: individual deletion of elements is managed via group deletion or other UI controls */}
           </div>
         </div>
       ))}

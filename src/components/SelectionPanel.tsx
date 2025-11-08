@@ -136,14 +136,15 @@ export function SelectionPanel() {
               const maxZ = (elements && elements.length) ? Math.max(...elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
               const baseZ = maxZ + 1;
 
-              // Add question rectangle at top (belongs to group)
-              addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center', zIndex: baseZ });
+              // Add question rectangle at top (belongs to group) with subtype 'question'
+              addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center', zIndex: baseZ, subtype: 'question' });
 
               // Add 4 option rectangles below (belong to group) with same zIndex
               const optionsStartY = topY + questionH + 20;
               for (let i = 0; i < 4; i++) {
                 const y = optionsStartY + i * (optionH + gap);
-                addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8, zIndex: baseZ });
+                // option rectangles — subtype 'option'
+                addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8, zIndex: baseZ, subtype: 'option' });
               }
               // Select the group so its properties (AI Topic) are shown in the inspector
               selectGroup(groupId);

@@ -40,6 +40,18 @@ export type EditorGroup = {
   ttsAnswerDuration?: boolean;
 };
 
+export type EditorCanvas = {
+  id: string;
+  width: number;
+  height: number;
+  background?: string | null;
+  backgroundRepeat?: boolean;
+  canvasMeta?: string;
+  canvasTtsModel?: string | undefined;
+  elements: EditorElement[];
+  groups: Record<string, EditorGroup>;
+};
+
 type EditorState = {
   elements: EditorElement[];
   selectedId: string | null;
@@ -53,12 +65,18 @@ type EditorState = {
   canvasBackgroundRepeat?: boolean;
   canvasMeta?: string; // arbitrary text to send to backend
   canvasTtsModel?: string; // selected TTS model for the canvas
+  // multi-canvas support
+  canvases?: EditorCanvas[];
+  currentCanvasId?: string | null;
   showCanvaProperties: boolean;
   groups: Record<string, EditorGroup>;
   addElement: (el: Omit<EditorElement, "id">) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   removeElement: (id: string) => void;
   addGroup: (g: Omit<EditorGroup, 'id'> & { id?: string }) => string;
+  newCanvas: (opts?: Partial<EditorCanvas>) => string;
+  switchCanvas: (id: string) => void;
+  deleteCanvas: (id: string) => void;
   updateGroup: (id: string, updates: Partial<EditorGroup>) => void;
   removeGroup: (id: string) => void;
   bringForward: (id: string) => void;
@@ -76,7 +94,9 @@ type EditorState = {
   setAspectRatio: (ratio: "9:16" | "16:9") => void;
 };
 
-export const useEditorStore = create<EditorState>((set) => ({
+export const useEditorStore = create<EditorState>((set) => {
+  const defaultCanvasId = 'canvas_' + crypto.randomUUID();
+  return {
   elements: [],
   selectedId: null,
   selectedGroupId: null,
@@ -90,6 +110,10 @@ export const useEditorStore = create<EditorState>((set) => ({
   canvasTtsModel: undefined,
   showCanvaProperties: false,
   groups: {},
+  // initialize with a single default canvas
+  canvases: [{ id: defaultCanvasId, width: 450, height: 800, background: null, backgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined, elements: [], groups: {} }],
+  // set currentCanvasId to the id of the default canvas above
+  currentCanvasId: defaultCanvasId,
   addElement: (el) =>
     set((s) => {
       // ensure rectangles have a text field (empty by default) and a cornerRadius default
@@ -103,10 +127,70 @@ export const useEditorStore = create<EditorState>((set) => ({
     }),
   addGroup: (g) => {
     const id = g.id ?? crypto.randomUUID();
-    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic, ttsMode: (g as any).ttsMode, clipDuration: (g as any).clipDuration, ttsQuestionDuration: (g as any).ttsQuestionDuration, answerDuration: (g as any).answerDuration, ttsAnswerDuration: (g as any).ttsAnswerDuration };
+    const group: EditorGroup = { id, name: g.name, aiTopic: g.aiTopic, ttsMode: (g as any).ttsMode ?? 'None', clipDuration: (g as any).clipDuration, ttsQuestionDuration: (g as any).ttsQuestionDuration, answerDuration: (g as any).answerDuration, ttsAnswerDuration: (g as any).ttsAnswerDuration };
     set((s) => ({ groups: { ...s.groups, [id]: group } } as any));
     return id;
   },
+  // create a new empty canvas and switch to it
+  newCanvas: (opts) => {
+    const id = opts?.id ?? 'canvas_' + crypto.randomUUID();
+    set((s) => {
+      // save current state into current canvas if exists
+      const canv = s.canvases || [];
+      const currId = s.currentCanvasId;
+      const updatedCanvases = canv.slice();
+      if (currId) {
+        const idx = updatedCanvases.findIndex((c) => c.id === currId);
+        if (idx >= 0) {
+          // store copies to avoid shared references between canvases
+          updatedCanvases[idx] = { ...updatedCanvases[idx], elements: s.elements.slice(), groups: { ...s.groups }, width: s.canvasWidth, height: s.canvasHeight, background: s.canvasBackground ?? null, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta || '', canvasTtsModel: s.canvasTtsModel };
+        }
+      }
+      const newCanvas: EditorCanvas = { id, width: opts?.width ?? 450, height: opts?.height ?? 800, background: opts?.background ?? null, backgroundRepeat: !!opts?.backgroundRepeat, canvasMeta: opts?.canvasMeta ?? '', canvasTtsModel: opts?.canvasTtsModel, elements: [], groups: {} };
+      updatedCanvases.push(newCanvas);
+      return { canvases: updatedCanvases, currentCanvasId: id, elements: [], groups: {}, canvasWidth: newCanvas.width, canvasHeight: newCanvas.height, canvasBackground: null, canvasBackgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined } as any;
+    });
+    return id;
+  },
+  // switch to an existing canvas by id (saves current canvas first)
+  switchCanvas: (id) => set((s) => {
+    if (!s.canvases) return {} as any;
+    if (s.currentCanvasId === id) return {} as any;
+    const updatedCanvases = s.canvases.slice();
+    const currId = s.currentCanvasId;
+    if (currId) {
+      const idx = updatedCanvases.findIndex((c) => c.id === currId);
+      if (idx >= 0) {
+        // store copies to avoid shared references between canvases
+        updatedCanvases[idx] = { ...updatedCanvases[idx], elements: s.elements.slice(), groups: { ...s.groups }, width: s.canvasWidth, height: s.canvasHeight, background: s.canvasBackground ?? null, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta || '', canvasTtsModel: s.canvasTtsModel };
+      }
+    }
+    const targetIdx = updatedCanvases.findIndex((c) => c.id === id);
+    if (targetIdx === -1) return {} as any;
+  const target = updatedCanvases[targetIdx];
+  return { canvases: updatedCanvases, currentCanvasId: id, elements: (target.elements || []).slice(), groups: { ...target.groups } , canvasWidth: target.width, canvasHeight: target.height, canvasBackground: target.background ?? null, canvasBackgroundRepeat: !!target.backgroundRepeat, canvasMeta: target.canvasMeta || '', canvasTtsModel: target.canvasTtsModel } as any;
+  }),
+  // delete a canvas (if deleting current, switch to another). If the last canvas is deleted,
+  // create a fresh empty canvas so the editor always has one canvas to work with.
+  deleteCanvas: (id) => set((s) => {
+    const canv = s.canvases || [];
+    const idx = canv.findIndex((c) => c.id === id);
+    if (idx === -1) return {} as any;
+    const updated = canv.slice();
+    updated.splice(idx, 1);
+    // if no canvases remain, create a new empty default canvas and switch to it
+    if (updated.length === 0) {
+      const newId = 'canvas_' + crypto.randomUUID();
+      const newCanvas: EditorCanvas = { id: newId, width: 450, height: 800, background: null, backgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined, elements: [], groups: {} };
+      return { canvases: [newCanvas], currentCanvasId: newId, elements: [], groups: {}, canvasWidth: newCanvas.width, canvasHeight: newCanvas.height, canvasBackground: null, canvasBackgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined } as any;
+    }
+    // if we deleted current canvas, switch to first remaining
+    if (s.currentCanvasId === id) {
+      const target = updated[0];
+      return { canvases: updated, currentCanvasId: target.id, elements: (target.elements || []).slice(), groups: { ...target.groups }, canvasWidth: target.width, canvasHeight: target.height, canvasBackground: target.background ?? null, canvasBackgroundRepeat: !!target.backgroundRepeat, canvasMeta: target.canvasMeta || '', canvasTtsModel: target.canvasTtsModel } as any;
+    }
+    return { canvases: updated } as any;
+  }),
   removeGroup: (id: string) =>
     set((s) => {
       // remove group entry and any elements that belong to it
@@ -177,4 +261,5 @@ export const useEditorStore = create<EditorState>((set) => ({
       // 16:9 -> default
       return { canvasWidth: 800, canvasHeight: 450 };
     }),
-}));
+  }
+});

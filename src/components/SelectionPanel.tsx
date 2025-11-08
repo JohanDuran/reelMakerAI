@@ -132,13 +132,18 @@ export function SelectionPanel() {
               const topY = 80;
 
               // Add question rectangle at top (belongs to group)
-              addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center' });
+              // compute a single base zIndex so all template elements share the same stacking position initially
+              const maxZ = (elements && elements.length) ? Math.max(...elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
+              const baseZ = maxZ + 1;
 
-              // Add 4 option rectangles below (belong to group)
+              // Add question rectangle at top (belongs to group)
+              addElement({ type: 'rectangle', groupId, x: startX, y: topY, width: rectW, height: questionH, text: 'Question', fontSize: 20, fontColor: 'white', fillColor: 'black', align: 'center', zIndex: baseZ });
+
+              // Add 4 option rectangles below (belong to group) with same zIndex
               const optionsStartY = topY + questionH + 20;
               for (let i = 0; i < 4; i++) {
                 const y = optionsStartY + i * (optionH + gap);
-                addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8 });
+                addElement({ type: 'rectangle', groupId, x: startX, y, width: rectW, height: optionH, text: `Option ${i + 1}`, fontSize: 16, fontColor: 'black', fillColor: 'lightblue', align: 'center', cornerRadius: 8, zIndex: baseZ });
               }
               // Select the group so its properties (AI Topic) are shown in the inspector
               selectGroup(groupId);
@@ -164,7 +169,6 @@ export function SelectionPanel() {
       {/* Hierarchy */}
       <div style={{ marginTop: 12, fontWeight: 600 }}>Hierarchy</div>
       <div style={{ marginTop: 8 }}>
-        <div style={{ marginBottom: 6, fontSize: 12, fontWeight: 600 }}>Canvases</div>
         {(() => {
           const cvs = (canvases || []).filter(Boolean);
           // ensure unique ids (defensive) and stable order
@@ -223,7 +227,7 @@ export function SelectionPanel() {
                   <div style={{ marginLeft: 12, marginTop: 6 }}>
                     {canvasElements.filter((e) => e.groupId === g.id).map((el) => (
                       <div key={c.id + '_el_' + el.id} style={{ padding: '4px 6px', borderRadius: 4, background: selectedId === el.id ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: 'pointer' }} onClick={() => { if (!isCurrent) switchCanvas(c.id); selectElement(el.id); }}>
-                        {el.type === 'rectangle' ? (el.text || 'Rectangle') : (el.type === 'text' ? (el.text || 'Text') : (el.fileName || 'Image'))}
+                        {el.type === 'rectangle' ? 'Rectangle' : el.type === 'text' ? 'Text' : el.type === 'aiImage' ? 'AI Image' : 'Image'}
                       </div>
                     ))}
                   </div>
@@ -233,7 +237,7 @@ export function SelectionPanel() {
               {/* Render ungrouped elements for this canvas */}
               {canvasElements.filter((e) => !e.groupId).map((el) => (
                 <div key={c.id + '_el_' + el.id} style={{ padding: '6px 8px', borderRadius: 6, background: selectedId === el.id ? 'rgba(255,255,255,0.04)' : 'transparent', cursor: 'pointer', marginBottom: 6, marginLeft: 8 }} onClick={() => { if (!isCurrent) switchCanvas(c.id); selectElement(el.id); }}>
-                  {el.type === 'rectangle' ? (el.text || 'Rectangle') : (el.type === 'text' ? (el.text || 'Text') : (el.fileName || 'Image'))}
+                  {el.type === 'rectangle' ? 'Rectangle' : el.type === 'text' ? 'Text' : el.type === 'aiImage' ? 'AI Image' : 'Image'}
                 </div>
               ))}
             </div>

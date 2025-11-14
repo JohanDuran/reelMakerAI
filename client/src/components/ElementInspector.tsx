@@ -6,7 +6,7 @@ import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 
 export function ElementInspector() {
-  const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat, groups, updateGroup, selectedGroupId } = useEditorStore();
+  const { elements, selectedId, updateElement, showCanvaProperties, canvasBackground, canvasMeta, setCanvasBackground, setCanvasMeta, selectedId: selId, setCanvasBackgroundFile, canvasBackgroundRepeat, setCanvasBackgroundRepeat, canvasRepeat, setCanvasRepeat, groups, updateGroup, selectedGroupId } = useEditorStore();
   const canvasInputRef = useRef<HTMLInputElement | null>(null);
   const element = elements.find((e) => e.id === selectedId);
 
@@ -59,6 +59,21 @@ export function ElementInspector() {
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <input id="bg-repeat" type="checkbox" checked={!!canvasBackgroundRepeat} onChange={(e) => setCanvasBackgroundRepeat(e.target.checked)} />
               <label htmlFor="bg-repeat" style={{ fontSize: 13 }}>Background repeat</label>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 600 }}>Repeat</div>
+            <input 
+              type="number" 
+              min="0" 
+              max="10" 
+              style={{ width: '100%', padding: '8px', borderRadius: 6 }} 
+              value={canvasRepeat || 0} 
+              onChange={(e) => setCanvasRepeat(Math.max(0, Math.min(10, parseInt(e.target.value) || 0)))} 
+            />
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>
+              Generate additional copies (0 = no repeats, 3 = create 3 more)
             </div>
           </div>
 

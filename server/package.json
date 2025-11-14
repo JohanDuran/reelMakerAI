@@ -1,0 +1,32 @@
+{
+  "name": "reel-maker-ai-server",
+  "version": "1.0.0",
+  "description": "Express backend for ReelMaker AI",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "dev:legacy": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "echo \"No linting configured yet\"",
+    "clean": "echo \"No cleanup needed\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.1.0",
+    "openai": "^4.104.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [
+    "express",
+    "api",
+    "reel-maker"
+  ],
+  "author": "",
+  "license": "ISC"
+}

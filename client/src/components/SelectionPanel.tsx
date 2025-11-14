@@ -9,10 +9,13 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
+import CircularProgress from '@mui/material/CircularProgress';
+import Box from '@mui/material/Box';
+import Backdrop from '@mui/material/Backdrop';
 import { serializeProject, deserializeProject } from '../utils/export';
 
 export function SelectionPanel() {
-  const { addElement, elements, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId, setShowCanvaProperties, canvases, currentCanvasId, newCanvas, switchCanvas, deleteCanvas } = useEditorStore();
+    const { addElement, elements, canvasWidth, groups, selectGroup, selectElement, selectedId, selectedGroupId, setShowCanvaProperties, canvases, currentCanvasId, newCanvas, switchCanvas, deleteCanvas, isGenerating, setIsGenerating } = useEditorStore();
   const [showModal, setShowModal] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
   const [canvasToDelete, setCanvasToDelete] = useState<string | null>(null);
@@ -69,6 +72,53 @@ export function SelectionPanel() {
           }} />
 
           <Button size="small" variant="outlined" color="secondary" onClick={() => fileInputRef.current && fileInputRef.current.click()}>Import</Button>
+          <Button 
+            size="small" 
+            variant="contained" 
+            color="primary" 
+            disabled={isGenerating}
+            onClick={async () => {
+              setIsGenerating(true);
+              try {
+                const json = serializeProject();
+                console.log('Sending project to generate:', json);
+                
+                const response = await fetch('http://localhost:5000/api/generate', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(json)
+                });
+                
+                if (!response.ok) {
+                  const errorData = await response.json();
+                  throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error}`);
+                }
+                
+                const result = await response.json();
+                console.log('Generate result:', result);
+                
+                if (result.success && result.updatedProject) {
+                  // Import the updated project to refresh the UI
+                  console.log('Importing updated project...');
+                  await deserializeProject(result.updatedProject);
+                } else {
+                  throw new Error('No updated project received');
+                }
+                
+              } catch (err) {
+                console.error('Generate failed', err);
+                alert('Generate failed: ' + String(err));
+              } finally {
+                setIsGenerating(false);
+              }
+            }} 
+            sx={{ backgroundColor: '#1976d2', '&:hover': { backgroundColor: '#115293' } }}
+            startIcon={isGenerating ? <CircularProgress size={16} color="inherit" /> : undefined}
+          >
+            {isGenerating ? 'Generating...' : 'Generate'}
+          </Button>
         </div>
       </div>
 
@@ -309,6 +359,31 @@ export function SelectionPanel() {
           }}>Import</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Full-screen loading backdrop */}
+      <Backdrop
+        sx={{ 
+          color: '#fff', 
+          zIndex: (theme) => theme.zIndex.modal + 1,
+          flexDirection: 'column',
+          gap: 2
+        }}
+        open={isGenerating || false}
+      >
+        <CircularProgress 
+          color="inherit" 
+          size={60}
+          thickness={4}
+        />
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" gutterBottom>
+            Generating AI Content...
+          </Typography>
+          <Typography variant="body2" sx={{ opacity: 0.8 }}>
+            Please wait while we create your content with AI
+          </Typography>
+        </Box>
+      </Backdrop>
     </CardPanel>
   );
 }

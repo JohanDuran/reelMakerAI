@@ -32,6 +32,7 @@ export type ExportCanvas = {
   backgroundRepeat?: boolean;
   canvasMeta?: string;
   canvasTtsModel?: string;
+  repeat?: number;
   elements: ExportElement[];
 };
 
@@ -183,6 +184,7 @@ export function serializeProject(): ExportProject {
       backgroundRepeat: !!cs.backgroundRepeat,
       canvasMeta: cs.canvasMeta || undefined,
       canvasTtsModel: cs.canvasTtsModel || undefined,
+      repeat: cs.repeat || 0,
       elements: elementsOut,
     };
     return canvasOut;
@@ -202,14 +204,13 @@ export function serializeProject(): ExportProject {
             backgroundRepeat: !!s.canvasBackgroundRepeat,
             canvasMeta: s.canvasMeta,
             canvasTtsModel: s.canvasTtsModel,
+            repeat: s.canvasRepeat || 0,
           };
           return convertCanvasState(live);
         }
         return convertCanvasState(c);
       })
-  : [convertCanvasState({ id: generateId('canvas_'), width: s.canvasWidth, height: s.canvasHeight, background: bgSrc, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta, canvasTtsModel: s.canvasTtsModel, elements: s.elements, groups: s.groups })];
-
-  const out: ExportProject = {
+    : [convertCanvasState({ id: generateId('canvas_'), width: s.canvasWidth, height: s.canvasHeight, background: bgSrc, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta, canvasTtsModel: s.canvasTtsModel, repeat: s.canvasRepeat || 0, elements: s.elements, groups: s.groups })];  const out: ExportProject = {
     version: 1,
     createdAt: new Date().toISOString(),
     app: { name: 'reelMakerAI', version: undefined },
@@ -325,6 +326,7 @@ export async function deserializeProject(obj: unknown): Promise<void> {
       backgroundRepeat: !!cv.backgroundRepeat,
       canvasMeta: cv.canvasMeta || '',
       canvasTtsModel: cv.canvasTtsModel,
+      repeat: cv.repeat || 0,
       elements,
       groups: groupsRecord,
     } as any;
@@ -343,6 +345,7 @@ export async function deserializeProject(obj: unknown): Promise<void> {
     canvasBackgroundRepeat: false,
     canvasMeta: '',
     canvasTtsModel: undefined,
+    canvasRepeat: 0,
     canvases: [],
     currentCanvasId: null,
     showCanvaProperties: false,
@@ -362,6 +365,7 @@ export async function deserializeProject(obj: unknown): Promise<void> {
     canvasBackgroundRepeat: !!first.backgroundRepeat,
     canvasMeta: first.canvasMeta || '',
     canvasTtsModel: first.canvasTtsModel,
+    canvasRepeat: first.repeat || 0,
     selectedId: null,
     selectedGroupId: null,
     showCanvaProperties: false,

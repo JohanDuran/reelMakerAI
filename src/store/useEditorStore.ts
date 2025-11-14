@@ -1,5 +1,5 @@
 import { create } from "zustand";
-
+import { generateId } from '../utils/id';
 export type EditorElement = {
   id: string;
   type: "text" | "image" | "rectangle" | "aiImage";
@@ -99,7 +99,7 @@ type EditorState = {
 };
 
 export const useEditorStore = create<EditorState>((set) => {
-  const defaultCanvasId = 'canvas_' + crypto.randomUUID();
+  const defaultCanvasId = generateId('canvas_');
   return {
   elements: [],
   selectedId: null,
@@ -136,11 +136,11 @@ export const useEditorStore = create<EditorState>((set) => {
       const elWithoutZ = { ...el } as any;
       // ensure we don't carry an id from caller
       delete elWithoutZ.id;
-      const newEl = { ...elWithoutZ, id: crypto.randomUUID(), ...defaults, zIndex: zIndexToUse } as EditorElement;
+  const newEl = { ...elWithoutZ, id: generateId(), ...defaults, zIndex: zIndexToUse } as EditorElement;
       return { elements: [...s.elements, newEl], selectedId: newEl.id } as any;
     }),
   addGroup: (g) => {
-    const id = g.id ?? crypto.randomUUID();
+  const id = g.id ?? generateId();
     // compute base z from current elements so group-created elements can share this zIndex
     set((s) => {
       const maxZ = s.elements && s.elements.length ? Math.max(...s.elements.map((e) => (typeof e.zIndex === 'number' ? e.zIndex : 0))) : -1;
@@ -152,7 +152,7 @@ export const useEditorStore = create<EditorState>((set) => {
   },
   // create a new empty canvas and switch to it
   newCanvas: (opts) => {
-    const id = opts?.id ?? 'canvas_' + crypto.randomUUID();
+  const id = opts?.id ?? generateId('canvas_');
     set((s) => {
       // save current state into current canvas if exists
       const canv = s.canvases || [];
@@ -199,7 +199,7 @@ export const useEditorStore = create<EditorState>((set) => {
     updated.splice(idx, 1);
     // if no canvases remain, create a new empty default canvas and switch to it
     if (updated.length === 0) {
-      const newId = 'canvas_' + crypto.randomUUID();
+  const newId = generateId('canvas_');
       const newCanvas: EditorCanvas = { id: newId, width: 450, height: 800, background: null, backgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined, elements: [], groups: {} };
       return { canvases: [newCanvas], currentCanvasId: newId, elements: [], groups: {}, canvasWidth: newCanvas.width, canvasHeight: newCanvas.height, canvasBackground: null, canvasBackgroundRepeat: false, canvasMeta: '', canvasTtsModel: undefined } as any;
     }

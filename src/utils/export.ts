@@ -1,5 +1,6 @@
 import { useEditorStore } from '../store/useEditorStore';
 import type { EditorElement, EditorGroup } from '../store/useEditorStore';
+import { generateId } from './id';
 
 /**
  * Human-friendly export schema using an assets map.
@@ -175,7 +176,7 @@ export function serializeProject(): ExportProject {
     ];
 
     const canvasOut: ExportCanvas = {
-      id: cs.id || ('canvas_' + crypto.randomUUID()),
+      id: cs.id || generateId('canvas_'),
       width: cs.width,
       height: cs.height,
       backgroundSrc: cs.background ?? undefined,
@@ -206,7 +207,7 @@ export function serializeProject(): ExportProject {
         }
         return convertCanvasState(c);
       })
-    : [convertCanvasState({ id: 'canvas_' + crypto.randomUUID(), width: s.canvasWidth, height: s.canvasHeight, background: bgSrc, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta, canvasTtsModel: s.canvasTtsModel, elements: s.elements, groups: s.groups })];
+  : [convertCanvasState({ id: generateId('canvas_'), width: s.canvasWidth, height: s.canvasHeight, background: bgSrc, backgroundRepeat: !!s.canvasBackgroundRepeat, canvasMeta: s.canvasMeta, canvasTtsModel: s.canvasTtsModel, elements: s.elements, groups: s.groups })];
 
   const out: ExportProject = {
     version: 1,
@@ -317,7 +318,7 @@ export async function deserializeProject(obj: unknown): Promise<void> {
     }
 
     return {
-      id: cv.id || ('canvas_' + crypto.randomUUID()),
+      id: cv.id || generateId('canvas_'),
       width: cv.width,
       height: cv.height,
       background: cv.backgroundSrc ?? null,
